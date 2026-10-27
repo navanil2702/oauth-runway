@@ -6,6 +6,8 @@
 - **Live generation**: enter any app name or website and an agent investigates it, runs live checks against its OAuth endpoints, and writes a guide in the same format.
 - **Shareable**: every guide has a link (`#gmail`), a copy-as-Markdown export for tickets and docs, and a step checklist that remembers your progress.
 
+**Try it:** [navanil2702.github.io/oauth-runway](https://navanil2702.github.io/oauth-runway/) is a public, library-only copy that anyone can open. For live generation, [run it locally](#run-it) with an API key, or open the Claude Artifact version in the Claude desktop app (shared on request).
+
 ## The problem, as I understood it
 
 An agent product needs three things that are easy to confuse:
@@ -93,7 +95,7 @@ Other commands:
 .venv/bin/python scripts/build_artifact.py --url https://claude.ai/artifact/<id>
 ```
 
-The last one bundles everything into one HTML file for a claude.ai Artifact. In that version, live generation runs on the viewer's own Claude and researches with the Claude desktop app's browser. In a plain web browser, with no browser tool available, it drafts from model knowledge and marks the whole guide as an unverified draft.
+Add `--static` to build the public library-only copy into `docs/` (served by GitHub Pages). Without it, the script bundles everything into one HTML file for a claude.ai Artifact. In that version, live generation runs on the viewer's own Claude and researches with the Claude desktop app's browser. In a plain web browser, with no browser tool available, it drafts from model knowledge and marks the whole guide as an unverified draft.
 
 ## Verification
 
