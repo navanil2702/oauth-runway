@@ -4,25 +4,25 @@
   "provider": "Notion Labs (Notion Developer portal)",
   "website": "https://developers.notion.com",
   "category": "Docs & knowledge base",
-  "summary": "Notion is mostly self-serve. You create a public connection (OAuth) in the Developer portal, pick 'Any workspace' as the installation scope, and can complete your first connection in under an hour. Notion's own docs only require review for the optional Marketplace listing, which takes 5-10 business days. The thing that matters most for an agent is the access model: the agent sees only the pages each user picks in Notion's page picker at consent. The alternative is Notion's remote MCP server, which needs no app registration, sees everything the user can see, and forces users to reconnect at least every 180 days.",
+  "summary": "Notion is mostly self-serve. You create a public connection (OAuth) in the Developer portal, pick 'Any workspace' as the installation scope, and can complete your first connection in under an hour. The Authorization URL appears in the Configuration tab only after you submit the public connection for review; the optional Marketplace listing is a separate security review that takes 5-10 business days. The thing that matters most for an agent is the access model: the agent sees only the pages each user picks in Notion's page picker at consent. The alternative is Notion's remote MCP server, which needs no app registration, sees everything the user can see, and forces users to reconnect at least every 180 days.",
   "verdict": {
     "difficulty": 2,
     "label": "Self-serve",
-    "headline": "No mandatory app review for OAuth. What decides the outcome is the installation scope ('Any workspace', which can't be changed later) and the per-page access each user grants at consent."
+    "headline": "No Marketplace review is needed for OAuth, but the Authorization URL appears only after you submit the public connection for review. What decides the outcome is the installation scope ('Any workspace', which can't be changed later) and the per-page access each user grants at consent."
   },
   "timeline": {
-    "first_connection": "30-60 minutes",
-    "production": "Same day if you skip the Marketplace. Allow 1-3 weeks if you list on the Marketplace, or if the 'submitted for review' gate mentioned in the authorization guide applies to your connection.",
-    "hands_on_effort": "2-4 hours: OAuth plumbing, refresh-token rotation, handling the page picker and empty access. Add about half a day for a Marketplace listing (copy, images, logo).",
-    "wait_detail": "There is no documented wait to start OAuth with arbitrary workspaces. Marketplace listing review is 'within 5-10 business days via email' per Notion. Rejections over brand/trademark or quality add a resubmit cycle. One sentence in the authorization guide says the Authorization URL field populates only after a public connection is submitted for review, while the public-connections page simply says to copy it from the Configuration tab. Plan for the possibility of a short review wait.",
+    "first_connection": "30-60 minutes to configure; the portal shows the Authorization URL only after you submit the public connection for review",
+    "production": "As soon as the public connection has been submitted for review and its Authorization URL appears in the Configuration tab (Notion documents no wait for this). Add 1-3 weeks if you list on the Marketplace (a separate security review, 'within 5-10 business days' per Notion, plus any resubmit).",
+    "hands_on_effort": "2-4 hours: OAuth plumbing, refresh handling (store the new refresh token each time), handling the page picker and empty access. Add about half a day for a Marketplace listing (copy, images, logo).",
+    "wait_detail": "The Authorization URL field populates only after the public connection is submitted for review (current Authorization guide; the public-connections guide just says to find it in the Configuration tab, and older 'once made public' wording is superseded). Notion documents no duration for that step. Marketplace listing is a separate security review: 'within 5-10 business days via email' per Notion. Rejections over brand/trademark or quality add a resubmit cycle.",
     "first_connection_short": "30-60 min",
-    "production_short": "Same day",
+    "production_short": "Days (no stated wait)",
     "hands_on_short": "2-4 hours"
   },
   "approval": {
     "needed_for_production": false,
-    "type": "marketplace listing (optional)",
-    "trigger": "Only a Marketplace listing requires review ('The Notion team reviews every listing submission'). The getting-started guide also says public connections must undergo a Notion security review before being listed on the Marketplace. Listing is only possible with installation scope 'Any workspace'.",
+    "type": "submission for review (to get the Authorization URL) + marketplace listing (optional)",
+    "trigger": "Submitting the public connection for review is what populates the Authorization URL in the Configuration tab. A Marketplace listing is a separate review ('The Notion team reviews every listing submission'); the getting-started guide says public connections undergo a Notion security review before being listed on the Marketplace. Listing is only possible with installation scope 'Any workspace'.",
     "what_happens_without_it": "Your connection still works through its OAuth flow ('Public connections work independently of Marketplace listings'). Users reach it only via your own install link, not through Marketplace discovery. With 'Selected workspaces only', only the workspaces you picked can install it.",
     "cost": "No fees documented. Rate limits depend on the installing workspace's plan, not on your app: 600 requests/min per connection on Business/Enterprise, 180 requests/min on other plans.",
     "evidence": "official",
@@ -30,7 +30,8 @@
       "s2",
       "s3",
       "s4",
-      "s8"
+      "s8",
+      "s18"
     ]
   },
   "managed_option": {
@@ -105,14 +106,26 @@
           ]
         },
         {
-          "title": "Copy the client ID, client secret and Authorization URL from the Configuration tab",
-          "detail": "Store the secret in your secrets manager. The authorization guide says the Authorization URL field populates after the connection is submitted for review; if it's blank, build the URL yourself (see config.authorize_url) or submit the connection.",
+          "title": "Copy the client ID and client secret from the Configuration tab",
+          "detail": "Store the secret in your secrets manager. The Authorization URL is not available yet: it populates only after you submit the public connection for review (next step).",
           "owner": "you",
           "effort": "5 min",
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s3"
+            "s3",
+            "s18"
+          ]
+        },
+        {
+          "title": "Submit the public connection for review, then copy the Authorization URL",
+          "detail": "Per the current Authorization guide, the Authorization URL field in the Configuration tab populates only after the public connection is submitted for review. This is separate from the optional Marketplace listing review.",
+          "owner": "you",
+          "effort": "5 min + undocumented wait",
+          "evidence": "official",
+          "source_ids": [
+            "s1",
+            "s18"
           ]
         }
       ]
@@ -146,30 +159,32 @@
           ]
         },
         {
-          "title": "Implement refresh with rotation",
-          "detail": "Use grant_type=refresh_token. Each refresh returns a new access token and a new refresh token, so persist the newest one atomically and serialize refreshes per connection. refresh_token may be null, so handle that case.",
+          "title": "Implement refresh and store the newest refresh token",
+          "detail": "Use grant_type=refresh_token. Each refresh returns a new access token and a new refresh token. The docs don't say whether the old refresh token stops working, so persist the newest one atomically and serialize refreshes per connection. refresh_token may be null, so handle that case.",
           "owner": "agent",
           "effort": "45 min",
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s6"
+            "s6",
+            "s19"
           ]
         },
         {
           "title": "Handle 'connected but sees nothing'",
-          "detail": "After consent, the agent can access only the pages and databases the user selected in the page picker, and their children. Use the search endpoint to list what was shared, and show a 'share more pages' prompt that re-runs OAuth. Since June 2026, each re-authorization mints a fresh token pair for new public connections, so replace the stored tokens.",
+          "detail": "After consent, the agent can access only the pages and databases the user selected in the page picker, and their children. Use the search endpoint to list what was shared, and show a 'share more pages' prompt that re-runs OAuth. Since the June 8, 2026 changelog, each successful authorization (including re-auth) mints a fresh token pair for new public connections (existing connections keep the old behavior), so replace the stored tokens.",
           "owner": "agent",
           "effort": "1 hour",
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s7"
+            "s7",
+            "s20"
           ]
         },
         {
           "title": "Connect your own workspace and a second test workspace",
-          "detail": "Complete the flow as yourself, then from a different workspace to confirm 'Any workspace' installs work without review.",
+          "detail": "After the connection has been submitted for review and the Authorization URL is available, complete the flow as yourself, then from a different workspace to confirm 'Any workspace' installs work.",
           "owner": "you",
           "effort": "15 min",
           "evidence": "inferred"
@@ -190,7 +205,7 @@
     {
       "name": "Go to production (optional Marketplace listing)",
       "goal": "Let any user install the connection, optionally with Marketplace discovery.",
-      "duration": "Same day without a listing; 1-3 weeks with one",
+      "duration": "As soon as the connection is submitted for review if you don't list; 1-3 weeks with a Marketplace listing",
       "steps": [
         {
           "title": "Ship your own 'Connect Notion' button",
@@ -252,7 +267,7 @@
     "token_url": "https://api.notion.com/v1/oauth/token (HTTP Basic client_id:client_secret, JSON body; grant types authorization_code and refresh_token)",
     "redirect_uri_rules": "Redirect URIs must be registered on the connection. redirect_uri in the token request is required if it was sent on the authorize URL or if more than one URI is registered. Use HTTPS in production. Whether localhost is accepted isn't documented on the pages we read.",
     "pkce": "REST public connections: not documented; they use a confidential client with a secret. Notion MCP (mcp.notion.com): PKCE S256 is mandatory per the docs and advertised in the discovery metadata.",
-    "refresh_tokens": "REST: a refresh_token (nullable) is returned and rotates on every refresh. Access-token lifetime isn't documented and the token response has no expires_in; older community guides say tokens never expire. Notion MCP: access tokens last about 8 hours; refresh tokens have a 180-day absolute cap from first authorization, expire after 30 days of inactivity, rotate on each refresh (at most 2 valid at once), and reusing a rotated refresh token can revoke the whole connection.",
+    "refresh_tokens": "REST: a refresh_token (nullable) is returned; each refresh returns a new access_token and a new refresh_token. The docs don't say whether the old refresh token is invalidated, so store the new one each time. Since the June 8, 2026 changelog, new public connections also get a fresh access/refresh pair on every successful OAuth authorization (including re-auth); existing connections keep the old behavior. That is not refresh-token rotation. Access-token lifetime isn't documented and the token response has no expires_in; older community guides say tokens never expire. Notion MCP: access tokens last about 8 hours; refresh tokens have a 180-day absolute cap from first authorization, expire after 30 days of inactivity, rotate on each refresh (at most 2 valid at once), and reusing a rotated refresh token can revoke the whole connection.",
     "scopes": [
       {
         "scope": "capability: Read content",
@@ -296,7 +311,9 @@
       "s6",
       "s9",
       "s12",
-      "s17"
+      "s17",
+      "s19",
+      "s20"
     ]
   },
   "gotchas": [
@@ -320,32 +337,35 @@
       ]
     },
     {
-      "title": "Authorization URL may be hidden until submission",
-      "detail": "The authorization guide says 'The Authorization URL field populates after a public connection is submitted for review', while the public-connections guide simply says to copy it from Configuration. The standard authorize URL can be built manually. It's unverified whether unsubmitted connections are blocked for outside workspaces.",
+      "title": "Authorization URL appears only after submitting for review",
+      "detail": "The current Authorization guide says 'The Authorization URL field populates after a public connection is submitted for review', in the Configuration tab. The public-connections guide only says to find it there and does not contradict this; older 'once made public' wording is superseded. Submit the connection early so this doesn't block your first outside-workspace test. Marketplace listing is a separate security review.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
         "s1",
-        "s3"
+        "s3",
+        "s18"
       ]
     },
     {
-      "title": "Refresh tokens rotate; concurrent refresh breaks connections",
-      "detail": "Each refresh returns a new refresh token. Store it atomically and don't refresh the same grant in parallel. On MCP, reusing a rotated-away refresh token can revoke the entire connection, and invalid_grant should be treated as final.",
+      "title": "Each refresh returns a new refresh token; store it and avoid concurrent refreshes",
+      "detail": "On REST, each refresh returns a new access token and a new refresh token. The docs don't say whether the old refresh token is invalidated, so store the newest one atomically and don't refresh the same grant in parallel. On MCP, refresh tokens do rotate: reusing a rotated-away refresh token can revoke the entire connection, and invalid_grant should be treated as final.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
         "s6",
-        "s12"
+        "s12",
+        "s19"
       ]
     },
     {
-      "title": "Re-authorization mints a new token pair (since June 2026)",
-      "detail": "New public connections now get a fresh access_token and refresh_token for each successful OAuth authorization, so a 'share more pages' re-auth must replace the stored tokens. Older guides that say re-auth returns the same token are outdated.",
+      "title": "Re-authorization mints a new token pair (since June 8, 2026)",
+      "detail": "Per the June 8, 2026 changelog, new public connections get a fresh access_token and refresh_token for each successful OAuth authorization, including re-auth; previously the existing active token was returned. Existing connections keep the old behavior. A 'share more pages' re-auth must replace the stored tokens. This is a change to authorization, not refresh-token rotation.",
       "impact": "nuance",
       "evidence": "official",
       "source_ids": [
-        "s7"
+        "s7",
+        "s20"
       ]
     },
     {
@@ -401,11 +421,12 @@
     },
     {
       "symptom": "Token exchange returns 400 invalid_grant",
-      "what_to_do": "The code was already used or expired, or redirect_uri doesn't match. For refresh, you used a rotated-away refresh token. Re-run the authorization; don't retry the same refresh.",
+      "what_to_do": "The code was already used or expired, or redirect_uri doesn't match. For refresh, you may have used an older refresh token instead of the newest one returned (the docs don't say whether old ones are invalidated). Re-run the authorization; don't retry the same refresh.",
       "evidence": "official",
       "source_ids": [
         "s6",
-        "s12"
+        "s12",
+        "s19"
       ]
     },
     {
@@ -418,10 +439,11 @@
     },
     {
       "symptom": "No Authorization URL in the Configuration tab",
-      "what_to_do": "Build it manually (https://api.notion.com/v1/oauth/authorize?client_id=...&response_type=code&owner=user&redirect_uri=...). If installs from outside workspaces still fail, submit the connection for review.",
-      "evidence": "inferred",
+      "what_to_do": "Submit the public connection for review; the Authorization URL field populates only after submission (Configuration tab).",
+      "evidence": "official",
       "source_ids": [
-        "s1"
+        "s1",
+        "s18"
       ]
     },
     {
@@ -453,7 +475,7 @@
   ],
   "handoff": {
     "agent_can": [
-      "Write the authorize redirect, the server-side code exchange (Basic auth) and refresh-token rotation with per-connection locking",
+      "Write the authorize redirect, the server-side code exchange (Basic auth) and refresh handling that stores the newest refresh token, with per-connection locking",
       "Build the 'connected but no pages shared' detection (empty search) and the re-auth prompt copy that tells users which pages to select",
       "Pick the minimal capability set and draft the capability list to enter in the portal",
       "Write 429 backoff using Retry-After and rate_limit_reason",
@@ -463,6 +485,7 @@
     ],
     "you_must": [
       "Log in to the Notion Developer portal and create the public connection (choose 'Any workspace'; this can't be changed later)",
+      "Submit the public connection for review in the Developer portal so the Authorization URL populates",
       "Store the client secret in your secrets manager",
       "Decide the capabilities, including whether you need user emails",
       "Complete the first OAuth connection with your own Notion account and select pages in the picker",
@@ -633,22 +656,44 @@
       "url": "https://mcp.notion.com/.well-known/oauth-authorization-server",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s18",
+      "title": "Verification: Notion Authorization guide: Authorization URL populates after submission for review (B8)",
+      "url": "https://developers.notion.com/guides/get-started/authorization",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s19",
+      "title": "Verification: Notion API reference: Refresh a token (B8)",
+      "url": "https://developers.notion.com/reference/refresh-a-token",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s20",
+      "title": "Verification: Notion changelog 2026-06-08: new token pair per authorization (B8)",
+      "url": "https://developers.notion.com/page/changelog",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
-    "Whether a public REST connection that hasn't been submitted for review can be installed by outside workspaces. The authorization guide says the Authorization URL 'populates after a public connection is submitted for review', but the public-connections and Marketplace pages say connections work independently of listings. We couldn't test this without an account.",
-    "The REST access-token lifetime: the token response has no expires_in, and docs don't state it. Older community guides (Nango) say tokens never expire and there are no refresh tokens, which current docs contradict (refresh_token grant, rotation). Plan for expiry and handle a null refresh_token.",
+    "Notion does not say how long the review after submitting a public connection takes, or whether outside workspaces can install it before that review finishes. Plan for a few days and test the Authorization URL with a second workspace before launch.",
+    "The REST access-token lifetime: the token response has no expires_in, and docs don't state it. Older community guides (Nango) say tokens never expire and there are no refresh tokens, which current docs contradict (the refresh_token grant returns a new access and refresh token). Plan for expiry and handle a null refresh_token.",
     "Exactly which fields are required to create a public connection today (company name, privacy policy, terms, support email were required in the older 'make public' form per community guides). Current docs list only name, workspace, redirect URIs, scope and capabilities.",
     "Whether localhost or http redirect URIs are accepted for REST public connections. This isn't stated on the pages we read.",
     "What the Marketplace 'security review' involves (questionnaire? pen-test?) and real-world turnaround. Only Notion's '5-10 business days' figure was found; no community reports on wait times turned up.",
     "Whether Composio or other managed-auth providers offer a managed Notion OAuth app. Not checked.",
     "The meaning of the MCP scope 'ema_issuer:manage' is inferred from its name and the enterprise-managed authorization docs.",
-    "We did not exercise MCP dynamic client registration live because it would create a client registration; only the metadata was read."
+    "We did not exercise MCP dynamic client registration live because it would create a client registration; only the metadata was read.",
+    "Whether the old REST refresh token is invalidated after a refresh: the refresh reference returns a new access_token and refresh_token but does not say (re-checked 2026-10-27). Store the newest refresh token every time."
   ],
   "meta": {
     "generated_at": "2026-10-27",
     "generated_by": "Claude Opus 5.5 (OAuth Runway investigator)",
     "mode": "library",
-    "reviewed": "Not reviewed by a human or second agent."
+    "reviewed": "On 2026-10-27 a fact-checker re-verified the Authorization URL gate and Notion refresh behavior (B8, partly). Resolved the doc conflict (the Authorization URL appears only after submitting the public connection for review; steps and timeline updated) and replaced 'refresh-token rotation' with 'each refresh returns a new pair', separating the June 8, 2026 per-authorization change; still undocumented whether old refresh tokens are invalidated and how long the submission step takes."
   }
 }

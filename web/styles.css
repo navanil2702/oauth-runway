@@ -137,7 +137,7 @@ table.lib tbody tr:hover { background: var(--sunk); }
 .ev-rows div { display: flex; justify-content: space-between; }
 @media (max-width: 900px) {
   .guide { grid-template-columns: minmax(0, 1fr); }
-  .rail { position: static; order: -1; }
+  .rail { position: static; }
   .rail nav { display: none; }
 }
 

@@ -1,0 +1,154 @@
+{
+  "id": "dropbox",
+  "name": "Dropbox",
+  "provider": "Dropbox (DBX Platform)",
+  "website": "https://www.dropbox.com/developers",
+  "category": "File storage",
+  "summary": "Self-serve: create a scoped app in the Dropbox App Console in minutes and connect your own account the same day; click 'Enable additional users' to let others connect (up to 500) with no warning screen. Production approval is a light branding/terms/least-privilege review, but Dropbox won't review it until 50 users have linked, and from that point you have two weeks before new links freeze, so apply the day you hit 50. Use token_access_type=offline: access tokens last about 4 hours.",
+  "verdict": {
+    "difficulty": 3,
+    "label": "Light review at 50 users",
+    "headline": "No review is needed until 50 users have linked. From then you have two weeks to get production status or new links freeze."
+  },
+  "timeline": {
+    "first_connection": "15-30 minutes (create app, set scopes and redirect URI, run the code flow against your own account)",
+    "production": "Usable by up to ~50 external users the same day; full production status = time to reach 50 linked users + a few business days of review (plan for 1-2 weeks of review slack)",
+    "hands_on_effort": "2-4 hours (app setup, branding check, production application form)",
+    "wait_detail": "There is no wait to start: development apps can link other users once 'Enable additional users' is on. The review queue only opens at 50 linked users (or earlier via 'Request early review' with a compelling case). Dropbox says it answers nearly all production requests within a few business days. Few community reports give actual durations, so treat the two-week freeze deadline as the real buffer.",
+    "first_connection_short": "15-30 min",
+    "production_short": "50 users + days",
+    "hands_on_short": "2-4 hours"
+  },
+  "approval": {
+    "needed_for_production": true,
+    "type": "app review",
+    "trigger": "50 linked Dropbox users. From then you have two weeks to apply and be approved. Apps in development status are capped at 500 linked users.",
+    "what_happens_without_it": "Development status links only your own account until you click 'Enable additional users'. After that, others can link (cap 500). If you hit 50 linked users and aren't approved within two weeks, new links are frozen. Unlinking users does not unfreeze the app; only production approval does.",
+    "cost": "None documented.",
+    "evidence": "official",
+    "source_ids": ["s1", "s3"]
+  },
+  "managed_option": {
+    "composio_managed": "unknown",
+    "when_you_need_your_own": "Composio publishes a guide for bringing your own Dropbox app (client ID/secret + Composio callback as redirect URI). We could not confirm whether a Composio-managed Dropbox app exists. You need your own app for your own branding on the consent screen, your own production status and quota, or scopes the managed app lacks."
+  },
+  "prerequisites": [
+    {"item": "A Dropbox account (free Basic works)", "why": "The App Console is behind Dropbox login. Apps are owned by the account that creates them."},
+    {"item": "A public HTTPS redirect URI for your agent backend", "why": "It must exactly match a URI registered in the App Console."},
+    {"item": "An app name and description that follow the Dropbox branding guidelines", "why": "Branding violations are the documented rejection reason, and the name is locked after production approval."}
+  ],
+  "phases": [
+    {
+      "name": "Create the app",
+      "goal": "Get an app key/secret with the right access type",
+      "duration": "10-15 minutes",
+      "steps": [
+        {"title": "Sign in to the Dropbox App Console", "detail": "Unauthenticated requests to /developers/apps redirect to the login page.", "owner": "you", "effort": "2 min", "url": "https://www.dropbox.com/developers/apps", "evidence": "tested", "source_ids": ["s7"]},
+        {"title": "Create app: choose 'Scoped access' and an access type", "detail": "Pick 'App folder' (access limited to /Apps/<your app>) or 'Full Dropbox'. An agent that works across a user's existing files needs Full Dropbox. Choose the narrowest option that works: reviewers check for unnecessarily broad permissions.", "owner": "agent+you", "effort": "5 min", "evidence": "official", "source_ids": ["s1"]},
+        {"title": "Pick an app name that doesn't imply Dropbox endorsement", "detail": "Don't suggest your app is built by, endorsed by or a partner of Dropbox. You can't rename the app after production approval.", "owner": "agent+you", "effort": "5 min", "evidence": "official", "source_ids": ["s1"]}
+      ]
+    },
+    {
+      "name": "Configure & test",
+      "goal": "Complete a real OAuth connection with refresh tokens",
+      "duration": "15-30 minutes",
+      "steps": [
+        {"title": "Select scopes in the Permissions tab", "detail": "Typical agent set: account_info.read, files.metadata.read, files.content.read, files.content.write, plus sharing.read/sharing.write if it creates links. Add or remove scopes before users authorize. You can also narrow scopes per authorization with the 'scopes' URL parameter.", "owner": "agent+you", "effort": "5 min", "evidence": "official", "source_ids": ["s2", "s6"]},
+        {"title": "Register exact redirect URIs", "detail": "Dropbox checks that redirect_uri matches one of the registered values at authorization time.", "owner": "you", "effort": "2 min", "evidence": "official", "source_ids": ["s2"]},
+        {"title": "Implement the code flow with token_access_type=offline (and PKCE for public clients)", "detail": "Authorize at https://www.dropbox.com/oauth2/authorize and exchange the code at https://api.dropboxapi.com/oauth2/token. Without token_access_type=offline you get no refresh token and the connection dies in ~4 hours. PKCE supports S256 (recommended) and plain.", "owner": "agent", "effort": "1 hour", "evidence": "official", "source_ids": ["s2", "s4"]},
+        {"title": "Connect your own account end-to-end", "detail": "Development apps can link the developer's own account immediately.", "owner": "you", "effort": "5 min", "evidence": "official", "source_ids": ["s1"]},
+        {"title": "Click 'Enable additional users' on the app's Settings page", "detail": "This lets other Dropbox users link while the app is still in development (up to 500). Track the linked-user count from this point.", "owner": "you", "effort": "1 min", "evidence": "official", "source_ids": ["s1"]}
+      ]
+    },
+    {
+      "name": "Get production status",
+      "goal": "Lift the 500-user cap and avoid the freeze at 50 users + 2 weeks",
+      "duration": "A few business days of review once 50 users have linked",
+      "steps": [
+        {"title": "Pre-check branding, terms and least privilege", "detail": "Review the name, description, icon and the access type you requested. Any planned features that justify broader permissions must be stated in the request.", "owner": "agent", "effort": "30-60 min", "evidence": "official", "source_ids": ["s1"]},
+        {"title": "Submit 'Apply for production' in the App Console", "detail": "Apply as soon as you near 50 linked users. If you have a strong reason for an earlier review, use the 'Request early review' field.", "owner": "you", "effort": "30 min", "evidence": "official", "source_ids": ["s1", "s3"]},
+        {"title": "Dropbox reviews the request", "detail": "Dropbox says it responds to nearly all production requests within a few business days.", "owner": "provider", "effort": "Few business days (official)", "evidence": "official", "source_ids": ["s3"]}
+      ]
+    }
+  ],
+  "config": {
+    "console_url": "https://www.dropbox.com/developers/apps",
+    "authorize_url": "https://www.dropbox.com/oauth2/authorize",
+    "token_url": "https://api.dropboxapi.com/oauth2/token",
+    "redirect_uri_rules": "The URI must exactly match one registered in the App Console. redirect_uri is optional in the code flow: if omitted, the code is shown on dropbox.com for the user to copy. HTTPS/localhost rules were not confirmed in the pages we read.",
+    "pkce": "Supported: S256 (recommended) or plain; code_verifier 43-128 chars. Send code_verifier instead of client_secret at the token endpoint.",
+    "refresh_tokens": "Only returned when token_access_type=offline is set on the authorize URL. Access tokens are short-lived: expires_in 14400 (4 hours) per community reports. Read the actual value from the token response. Refresh tokens are long-lived and don't expire automatically, but users can revoke them. New long-lived access tokens are no longer issued.",
+    "scopes": [
+      {"scope": "account_info.read", "tier": "basic", "note": "Read the user's account info. Usually required."},
+      {"scope": "files.metadata.read", "tier": "basic", "note": "List and search files and folders."},
+      {"scope": "files.content.read", "tier": "basic", "note": "Download and read file contents."},
+      {"scope": "files.content.write", "tier": "basic", "note": "Create, modify and delete files. Reviewers check whether the requested access is broader than needed."},
+      {"scope": "sharing.read / sharing.write", "tier": "basic", "note": "Read, create and manage shared links and folder sharing."},
+      {"scope": "team_data.member / team_* (Business API)", "tier": "admin-consent", "note": "Team scopes produce a team-linked token that a team admin authorizes. Only needed for team-wide agents."},
+      {"scope": "openid / profile / email", "tier": "basic", "note": "OIDC scopes advertised in the discovery document."}
+    ],
+    "evidence": "official",
+    "source_ids": ["s2", "s5", "s6"]
+  },
+  "gotchas": [
+    {"title": "50-user trigger and two-week freeze", "detail": "Review only starts at 50 linked users. You then have two weeks to apply and be approved, or new links freeze, and unlinking users does not help. If you launch publicly and grow fast, you could hit 50 and freeze over a weekend.", "impact": "blocker", "evidence": "official", "source_ids": ["s1", "s3"]},
+    {"title": "Without offline access, connections die in 4 hours", "detail": "Unless the authorize URL includes token_access_type=offline you get no refresh token, and access tokens expire after ~4 hours (expires_in 14400). The token generated in the console is not a refresh token: using it as one gives a 'malformed' error.", "impact": "blocker", "evidence": "community", "source_ids": ["s2", "s4"]},
+    {"title": "Access type is a big decision", "detail": "App folder vs Full Dropbox is chosen at creation. An agent that must touch existing files needs Full Dropbox, and that must be justified as least privilege in review.", "impact": "delay", "evidence": "official", "source_ids": ["s1"]},
+    {"title": "Name is locked after production", "detail": "Once the app has production status you can't change its name. Pick the final brand before applying.", "impact": "nuance", "evidence": "official", "source_ids": ["s1"]},
+    {"title": "One app key per product; platform tools need per-developer keys", "detail": "If your product is a developer platform that wraps Dropbox, each downstream developer must register their own app key.", "impact": "nuance", "evidence": "official", "source_ids": ["s1"]},
+    {"title": "Scopes are per authorization", "detail": "Use the 'scopes' parameter to request only what you need now. Adding scopes later requires users to re-authorize.", "impact": "nuance", "evidence": "official", "source_ids": ["s2"]}
+  ],
+  "blockers": [
+    {"symptom": "Authorize page redirects to /oauth2/authorize_error with error_name=unknown_client_id ('Invalid client_id')", "what_to_do": "Use the App key from the App Console as client_id (not the app name). Check that you are using the right app.", "evidence": "tested", "source_ids": ["s8"]},
+    {"symptom": "Token endpoint returns HTTP 400 {\"error\": \"invalid_client: Invalid client_id or client_secret\"}", "what_to_do": "Send the app key/secret via HTTP Basic or POST body (client_secret_basic / client_secret_post). With PKCE, send code_verifier instead of client_secret.", "evidence": "tested", "source_ids": ["s9", "s2"]},
+    {"symptom": "401 expired_access_token after ~4 hours", "what_to_do": "Re-authorize with token_access_type=offline, store the refresh_token, and refresh with grant_type=refresh_token.", "evidence": "community", "source_ids": ["s4"]},
+    {"symptom": "New users can no longer link (app frozen)", "what_to_do": "You passed 50 users + 2 weeks without approval. Apply for production right away: unlinking users does not unfreeze the app.", "evidence": "official", "source_ids": ["s1"]},
+    {"symptom": "Production request rejected", "what_to_do": "Fix branding (no implied endorsement, follow the logo rules), narrow the access type or scopes, or explain the planned features in the request. Then resubmit.", "evidence": "official", "source_ids": ["s1"]}
+  ],
+  "handoff": {
+    "agent_can": [
+      "Generate the authorize URL (response_type=code, token_access_type=offline, PKCE S256, scopes) and the token-exchange and refresh code",
+      "Pick a minimal scope set and justify App folder vs Full Dropbox in writing for the production request",
+      "Audit the app name, description and UI copy against the Dropbox branding guidelines (no implied endorsement)",
+      "Draft the 'Apply for production' text, including planned features that need broader scopes and an early-review justification",
+      "Add linked-user count monitoring that alerts at ~40 users so you apply before the 50-user + two-week clock"
+    ],
+    "you_must": [
+      "Sign in to the Dropbox App Console, create the app and copy the app key/secret into your secret store",
+      "Register the production redirect URI(s)",
+      "Click 'Enable additional users' and complete the first test connection with your own account",
+      "Submit the production application, and accept any terms, under your account",
+      "Decide the final app name before applying: it can't change after approval"
+    ]
+  },
+  "tests": [
+    {"check": "OIDC discovery document", "method": "curl https://www.dropbox.com/.well-known/openid-configuration", "result": "HTTP 200. issuer https://www.dropbox.com, authorization_endpoint https://www.dropbox.com/oauth2/authorize, token_endpoint https://api.dropboxapi.com/oauth2/token, scopes_supported [openid, profile, email], response_types [code], grant_types [authorization_code], token_endpoint_auth_methods [client_secret_basic, client_secret_post]", "supports": "Authorize/token endpoints in config; OIDC scopes"},
+    {"check": "Authorize endpoint with dummy client_id", "method": "curl GET /oauth2/authorize?client_id=oauth-runway-probe&redirect_uri=https://example.com/cb&response_type=code", "result": "HTTP 302 -> https://www.dropbox.com/oauth2/authorize_error?client_id=oauth-runway-probe&error_detail=Invalid client_id: \"oauth-runway-probe\".&error_name=unknown_client_id", "supports": "Endpoint is live. Shows the error a misconfigured client sees."},
+    {"check": "Token endpoint with dummy credentials", "method": "curl POST https://api.dropboxapi.com/oauth2/token grant_type=authorization_code, code=dummy, client_id/secret dummy", "result": "HTTP 400 {\"error\": \"invalid_client: Invalid client_id or client_secret\"}", "supports": "Token endpoint error shape"},
+    {"check": "App Console reachability", "method": "curl GET https://www.dropbox.com/developers/apps", "result": "HTTP 302 -> https://www.dropbox.com/login?cont=https%3A%2F%2Fwww.dropbox.com%2Fdevelopers%2Fapps", "supports": "The first human step is signing in to Dropbox"}
+  ],
+  "sources": [
+    {"id": "s1", "title": "DBX Platform developer guide (production approval, branding, access types)", "url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide", "kind": "official", "accessed": "2026-10-27"},
+    {"id": "s2", "title": "Dropbox OAuth guide", "url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth", "kind": "official", "accessed": "2026-10-27"},
+    {"id": "s3", "title": "Dropbox developer support / FAQ", "url": "https://www.dropbox.com/developers/support", "kind": "official", "accessed": "2026-10-27"},
+    {"id": "s4", "title": "spatie/flysystem-dropbox issue #86 (expired tokens, expires_in 14400, refresh-token fix)", "url": "https://github.com/spatie/flysystem-dropbox/issues/86", "kind": "community", "accessed": "2026-10-27"},
+    {"id": "s5", "title": "Live check: Dropbox OIDC discovery document", "url": "https://www.dropbox.com/.well-known/openid-configuration", "kind": "test", "accessed": "2026-10-27"},
+    {"id": "s6", "title": "AWS Quick Dropbox integration (scope descriptions, third-party)", "url": "https://docs.aws.amazon.com/quick/latest/userguide/dropbox-integration.md", "kind": "community", "accessed": "2026-10-27"},
+    {"id": "s7", "title": "Live check: App Console redirects to login", "url": "https://www.dropbox.com/developers/apps", "kind": "test", "accessed": "2026-10-27"},
+    {"id": "s8", "title": "Live check: authorize endpoint with dummy client_id", "url": "https://www.dropbox.com/oauth2/authorize?client_id=oauth-runway-probe&redirect_uri=https://example.com/cb&response_type=code", "kind": "test", "accessed": "2026-10-27"},
+    {"id": "s9", "title": "Live check: token endpoint with dummy credentials", "url": "https://api.dropboxapi.com/oauth2/token", "kind": "test", "accessed": "2026-10-27"}
+  ],
+  "uncertainties": [
+    "Actual review durations: only Dropbox's own 'few business days' claim was found. The forum threads we tried to read (community.dropbox.com) rendered without content, so we have no first-hand reports.",
+    "Redirect URI scheme rules (HTTPS required? http://localhost allowed?): not stated in the OAuth guide pages we read. We couldn't probe them without a real app key.",
+    "The 4-hour access-token lifetime comes from community reports (expires_in 14400). Official docs say only 'short-lived' and tell you to read expires_in.",
+    "We didn't open Dropbox's official scope reference page. Scope descriptions come from third-party docs and from knowing the Permissions tab layout.",
+    "Whether 'Enable additional users' in development shows any warning to linking users, and how strictly the 500 cap is enforced, was not verified live.",
+    "Whether Composio offers a managed Dropbox app is unconfirmed."
+  ],
+  "meta": {
+    "generated_at": "2026-10-27",
+    "generated_by": "OAuth Runway research prompt (run as a Claude Code subagent)",
+    "mode": "live"
+  }
+}

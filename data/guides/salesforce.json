@@ -4,17 +4,17 @@
   "provider": "Salesforce (External Client Apps / Connected Apps, Partner Program)",
   "website": "https://developer.salesforce.com",
   "category": "CRM",
-  "summary": "You can connect your own Salesforce org in about an hour: create a free Developer Edition org and a local External Client App (new Connected Apps are blocked by default since Spring '26). Local ECAs cannot authorize users from other orgs. To serve arbitrary customers you need a 2GP managed package that carries a packaged ECA, and each customer's admin must install it. Once more than two customer production orgs use the app, Salesforce enforces PKCE, refresh-token rotation, a 30-day idle TTL and a refresh-token IP allowlist, which means you need static egress IPs. AppExchange security review (4-6 weeks officially; $2,550 + $150 for paid apps, free apps exempt) is optional unless you want a listing or Professional/Group Edition access.",
+  "summary": "You can connect your own Salesforce org in about an hour: create a free Developer Edition org and a local External Client App (new Connected Apps are blocked by default since Spring '26). Local ECAs cannot authorize users from other orgs. To serve arbitrary customers you need a 2GP managed package that carries a packaged ECA, and each customer's admin must install it (installation is also what the Sept 2025 uninstalled-app restriction requires for non-admin users). Once more than two customer production orgs use the app, Salesforce enforces PKCE, refresh-token rotation, a 30-day idle TTL and a refresh-token IP allowlist, which means you need static egress IPs. AppExchange security review (Salesforce estimates about 1-2 weeks readiness plus 3-4 weeks first test, plus 2-3 weeks per resubmission; $999 per review attempt for paid/freemium apps, waived for free apps) is optional unless you want a listing or Professional/Group Edition access.",
   "verdict": {
     "difficulty": 4,
     "label": "Per-org install",
-    "headline": "Since Spring '26 you cannot create a new Connected App by default, and a local External Client App only works in its own org. Multi-tenant access therefore means shipping a packaged ECA in a 2GP managed package that every customer admin installs."
+    "headline": "Since Spring '26 you cannot create a new Connected App by default, and a local External Client App only works in its own org. Multi-tenant access therefore means shipping a packaged ECA in a 2GP managed package that every customer admin installs; since Sept 2025 even existing Connected Apps must be installed per org for non-admin users."
   },
   "timeline": {
     "first_connection": "About 45-90 minutes: free Developer Edition org, a local ECA, then wait up to about 10 minutes for the OAuth settings to take effect.",
-    "production": "1-3 weeks to a working 2GP package that customer admins can install, without AppExchange. Add 4-6 weeks officially for the AppExchange security review; community reports of 6-12 weeks including resubmissions are common, so plan around about 8 weeks. Every customer org also needs an admin to install the package before its users can connect.",
+    "production": "1-3 weeks to a working 2GP package that customer admins can install, without AppExchange. For the AppExchange security review add Salesforce's stage estimates (about 1-2 weeks readiness, 3-4 weeks first test, 2-3 weeks per resubmission); community reports of 6-12 weeks including resubmissions are common, so plan around about 8 weeks. Every customer org also needs an admin to install the package before its users can connect.",
     "hands_on_effort": "1-3 days for 2GP setup (Dev Hub, namespace, packaged ECA, package versioning), PKCE, rotation-safe token storage and static egress IPs. Add 1-2 weeks for security review prep (scanner reports, docs, test org) if you list.",
-    "wait_detail": "The OAuth settings themselves wait only minutes. The long waits are (a) AppExchange security review, where Salesforce documents about 1-2 weeks for readiness checks plus 3-4 weeks for the first test and queue volume drives variance, (b) the Support case to register refresh-token IP ranges, and (c) each customer's admin installing your package and adjusting policies.",
+    "wait_detail": "The OAuth settings themselves wait only minutes. The long waits are (a) AppExchange security review, where Salesforce documents about 1-2 weeks for readiness checks plus 3-4 weeks for the first test and 2-3 weeks per resubmission (all estimates), and queue volume drives variance, (b) the Support case to register refresh-token IP ranges, and (c) each customer's admin installing your package and adjusting policies.",
     "first_connection_short": "45-90 min",
     "production_short": "1-3 weeks",
     "hands_on_short": "1-3 days"
@@ -22,9 +22,9 @@
   "approval": {
     "needed_for_production": true,
     "type": "marketplace listing (optional) + per-org admin install; mandatory OAuth security controls",
-    "trigger": "Connecting orgs other than the one that owns the app. Local ECAs are single-org. Uninstalled Connected Apps have been blocked for ordinary users since Sept 2025. The mandatory partner controls kick in once more than two customer production orgs use the app. Security review is needed only to list on AppExchange, or for API access in Professional or Group Edition orgs that lack the API add-on.",
-    "what_happens_without_it": "Without a package install in the customer org, authorization fails. A local ECA returns OAUTH_AUTHORIZATION_BLOCKED ('Cross-org OAuth flows are not supported for this external client app'). An uninstalled Connected App returns OAUTH_APPROVAL_ERROR_GENERIC or 'app must be installed into org', unless the user holds 'Approve Uninstalled Connected Apps' or 'Use Any API Client'. Without the four controls, Salesforce may suspend the app's interoperation. Without a security review there is no AppExchange listing and no PE/GE API allowlisting.",
-    "cost": "Building and packaging is free (Developer Edition and Dev Hub). AppExchange security review for paid apps: $2,550 plus a $150 first-year listing fee, then $150 a year; free apps are exempt. Customers need Enterprise, Unlimited, Performance or Developer Edition, or Professional Edition with the API add-on. The partner program revenue share for paid apps is not covered here.",
+    "trigger": "Connecting orgs other than the one that owns the app. Local ECAs are single-org. Uninstalled Connected Apps have been blocked for users without 'Approve Uninstalled Connected Apps' since Sept 2025 (enforced about Sep 2-17, 2025 for existing orgs). The mandatory partner controls kick in once more than two customer production orgs use the app. Security review is needed only to list on AppExchange, or for API access in Professional or Group Edition orgs that lack the API add-on.",
+    "what_happens_without_it": "Without a package install in the customer org, authorization fails. A local ECA returns OAUTH_AUTHORIZATION_BLOCKED ('Cross-org OAuth flows are not supported for this external client app'). An uninstalled Connected App returns OAUTH_APPROVAL_ERROR_GENERIC or 'app must be installed into org', unless the user holds 'Approve Uninstalled Connected Apps' (System Administrator profiles have it automatically). 'Use Any API Client' no longer works around this since a security update rolling out from the week of Dec 8, 2025. Without the four controls, Salesforce may suspend the app's interoperation. Without a security review there is no AppExchange listing and no PE/GE API allowlisting.",
+    "cost": "Building and packaging is free (Developer Edition and Dev Hub). AppExchange security review: $999 per review attempt (initial, resubmission, new version, periodic re-review) for paid, freemium and paid add-on solutions, waived for free solutions, with no annual listing fee (the $2,550 + $150/yr schedule ended in March 2023). Confirm with your Partner Account Manager, because the newest fee page would not render. Customers need Enterprise, Unlimited, Performance or Developer Edition, or Professional Edition with the API add-on. The partner program revenue share for paid apps is not covered here.",
     "evidence": "official",
     "source_ids": [
       "s6",
@@ -32,7 +32,13 @@
       "s17",
       "s18",
       "s21",
-      "s5"
+      "s5",
+      "s24",
+      "s25",
+      "s26",
+      "s27",
+      "s28",
+      "s29"
     ]
   },
   "managed_option": {
@@ -84,11 +90,12 @@
           "owner": "you",
           "effort": "15 min",
           "url": "https://login.salesforce.com/lightning/setup/ManageExternalClientApplication/home",
-          "evidence": "community",
+          "evidence": "official",
           "source_ids": [
             "s5",
             "s13",
-            "s21"
+            "s21",
+            "s24"
           ]
         },
         {
@@ -167,10 +174,11 @@
           "detail": "Create an sfdx project and retrieve the ECA metadata. Set distributionState=Packaged, keep the global OAuth settings and policy files out of the package (.forceignore), then create and promote a managed package version.",
           "owner": "agent+you",
           "effort": "0.5-2 days",
-          "evidence": "community",
+          "evidence": "official",
           "source_ids": [
             "s12",
-            "s11"
+            "s11",
+            "s25"
           ]
         },
         {
@@ -186,14 +194,16 @@
         },
         {
           "title": "Customer admin installs the package",
-          "detail": "Send each customer the install URL. The admin installs it, opens the ECA in App Manager, and sets Permitted Users and policies. Users can authorize only after this.",
+          "detail": "Send each customer the install URL. The admin installs it, opens the ECA in App Manager, and sets Permitted Users and policies. Users can authorize only after this. This install is required both for packaged ECAs and, since Sept 2025, for any Connected App used by non-admin users.",
           "owner": "you",
           "effort": "Per customer, 10-30 min of their admin's time",
           "evidence": "community",
           "source_ids": [
             "s11",
             "s9",
-            "s22"
+            "s22",
+            "s25",
+            "s26"
           ]
         }
       ]
@@ -201,7 +211,7 @@
     {
       "name": "Optional: AppExchange security review",
       "goal": "AppExchange listing, customer trust, PE/GE API allowlisting",
-      "duration": "4-6 weeks official; plan for about 8 weeks",
+      "duration": "Salesforce estimates about 1-2 weeks readiness + 3-4 weeks first test + 2-3 weeks per resubmission; plan for about 8 weeks",
       "steps": [
         {
           "title": "Join the Salesforce Partner Program and get a Partner Business Org",
@@ -219,17 +229,20 @@
           "effort": "3-10 days",
           "evidence": "official",
           "source_ids": [
-            "s17"
+            "s17",
+            "s29"
           ]
         },
         {
           "title": "Salesforce reviews",
-          "detail": "About 1-2 weeks of operations readiness checks, then 3-4 weeks for the Product Security test. Failures come back as a report that you must fix and resubmit.",
+          "detail": "About 1-2 weeks of submission readiness checks, then 3-4 weeks for the first Product Security test (Salesforce estimates). Failures come back as a report that you must fix and resubmit; each resubmission takes about 2-3 weeks and costs another review fee for paid apps.",
           "owner": "provider",
-          "effort": "4-6 weeks wait",
+          "effort": "5-6 weeks wait + 2-3 weeks per resubmission",
           "evidence": "official",
           "source_ids": [
-            "s17"
+            "s17",
+            "s29",
+            "s28"
           ]
         },
         {
@@ -305,34 +318,38 @@
   "gotchas": [
     {
       "title": "New Connected Apps are blocked by default since Spring '26",
-      "detail": "Creation is disabled in all orgs through both the UI and the API. Support can grant a temporary exception, which Salesforce says will be removed. Build on External Client Apps; Connected App to ECA migration is one-way.",
+      "detail": "Creation is disabled in all orgs through both the UI and the API. Support can grant a temporary exception, which Salesforce says will be removed. Existing Connected Apps keep working. Build on External Client Apps; Connected App to ECA migration is one-way.",
       "impact": "blocker",
-      "evidence": "community",
+      "evidence": "official",
       "source_ids": [
         "s5",
         "s13",
-        "s21"
+        "s21",
+        "s24"
       ]
     },
     {
       "title": "A local ECA cannot connect other orgs",
-      "detail": "A Connected App defined in org A could authorize users in org B without an install. A local ECA works only in its own org; a packaged ECA works only where installed. Cross-org attempts fail with OAUTH_AUTHORIZATION_BLOCKED: 'Cross-org OAuth flows are not supported for this external client app'.",
+      "detail": "A Connected App defined in org A could authorize users in org B without an install. A local ECA works only in its own org; a packaged ECA works only where installed. Cross-org attempts fail with OAUTH_AUTHORIZATION_BLOCKED: 'Cross-org OAuth flows are not supported for this external client app'. Local ECAs cannot be distributed: set Distribution State = Packaged and ship the ECA in a 2GP managed package (global OAuth settings, i.e. the consumer key/secret, stay in the owner org and are not packaged). Per-customer installation is not only an ECA requirement: the Sept 2025 uninstalled-app restriction requires it for non-admin users of Connected Apps too.",
       "impact": "blocker",
       "evidence": "community",
       "source_ids": [
         "s11",
-        "s10"
+        "s10",
+        "s25"
       ]
     },
     {
       "title": "Uninstalled apps are blocked for most users (since Sept 2025)",
-      "detail": "Even legacy Connected Apps now need the customer admin to install them (Setup > Connected Apps OAuth Usage > Install), or users need 'Approve Uninstalled Connected Apps' or 'Use Any API Client' (the latter only works under API Access Control). Device flow from uninstalled apps is blocked for everyone.",
+      "detail": "Enforced from about Sep 2-17, 2025 for existing orgs and from Aug 28/Sep 1, 2025 for new orgs. Even legacy Connected Apps now need the customer admin to install them (Setup > Connected Apps OAuth Usage > Install). Only the 'Approve Uninstalled Connected Apps' permission still bypasses this (System Administrator profiles have it automatically). 'Use Any API Client' no longer lets users self-authorize uninstalled apps since a security update rolling out from the week of Dec 8, 2025, so do not rely on it; have customers install the app/package. Previously authorized users were generally exempt, but device flow from uninstalled apps is blocked for everyone.",
       "impact": "blocker",
-      "evidence": "community",
+      "evidence": "official",
       "source_ids": [
         "s8",
         "s9",
-        "s22"
+        "s22",
+        "s26",
+        "s27"
       ]
     },
     {
@@ -400,16 +417,19 @@
       "source_ids": [
         "s10",
         "s11",
-        "s23"
+        "s23",
+        "s25"
       ]
     },
     {
       "symptom": "OAUTH_APPROVAL_ERROR_GENERIC or error_description=app must be installed into org",
-      "what_to_do": "Uninstalled-app restriction. Have the admin install the app (Setup > Connected Apps OAuth Usage > Install) and set Permitted Users, or grant the user 'Approve Uninstalled Connected Apps'.",
-      "evidence": "community",
+      "what_to_do": "Uninstalled-app restriction. Have the admin install the app or package (Setup > Connected Apps OAuth Usage > Install) and set Permitted Users. Granting 'Approve Uninstalled Connected Apps' is the only per-user bypass; 'Use Any API Client' no longer works since the Dec 2025 security update.",
+      "evidence": "official",
       "source_ids": [
         "s9",
-        "s22"
+        "s22",
+        "s26",
+        "s27"
       ]
     },
     {
@@ -680,22 +700,66 @@
       "url": "https://github.com/anthropics/claude-code/issues/94824",
       "kind": "community",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s24",
+      "title": "Verification: Salesforce CLI dev guide: connected app creation restricted as of Spring '26 (B3)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_auth_connected_app.htm",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s25",
+      "title": "Verification: Trailhead: Package and Distribute External Client Apps (B3)",
+      "url": "https://trailhead.salesforce.com/content/learn/modules/external-client-app-basics/package-and-distribute-external-client-apps",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s26",
+      "title": "Verification: Salesforce help 005132365: September 2025 uninstalled connected app restriction (B4)",
+      "url": "https://help.salesforce.com/s/articleView?id=005132365&language=en_US&type=1",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s27",
+      "title": "Verification: Salesforce help 005228838: Use Any API Client no longer self-authorizes uninstalled apps (B4; seen as search index, page did not render)",
+      "url": "https://help.salesforce.com/s/articleView?language=en_US&id=005228838&type=1",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s28",
+      "title": "Verification: Packaging guide: security review fees ($999 per attempt; B5; newest page did not render)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/security_review_fees.htm",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s29",
+      "title": "Verification: Packaging guide: How the Security Review Works (stage estimates; B5)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packageGuide/security_review_how_it_works.htm",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
-    "Cross-org behaviour of local ECAs (OAUTH_AUTHORIZATION_BLOCKED) comes from community sources (Aquiva, a Trailblazer thread); help.salesforce.com ECA articles rendered only an error page to the fetch tool, so this was not confirmed against official text.",
-    "Whether the Support exception for creating new Connected Apps is still granted as of Oct 2026 is unknown. One PTC note claims Connected Apps lose support in Winter '27; Striim says no deprecation date has been announced.",
-    "developer.salesforce.com returned HTTP 403 to both WebFetch and curl. Security review timelines and fees, PE/GE API access, edition support and API limits are taken from search-result excerpts of those official pages, not full reads.",
-    "Security review wait times beyond the official 4-6 weeks rely on general community experience, not a specific 2026 report read here.",
+    "Cross-org behaviour of local ECAs: Trailhead (re-checked 2026-10-27) confirms local ECAs cannot be distributed and must be packaged in 2GP, but the exact OAUTH_AUTHORIZATION_BLOCKED error text comes only from community sources (Aquiva, a Trailblazer thread); help.salesforce.com ECA articles did not render.",
+    "Existing Connected Apps keep working and Support can grant a temporary creation exception that Salesforce says will be removed later (re-checked 2026-10-27), but whether the exception is still granted as of Oct 2026 is unknown. One PTC note claims Connected Apps lose support in Winter '27; Striim says no deprecation date has been announced.",
+    "developer.salesforce.com returned HTTP 403 to both WebFetch and curl. Security review timelines, PE/GE API access, edition support and API limits are taken from search-result excerpts of those official pages, not full reads.",
+    "Security review wait times beyond Salesforce's stage estimates (1-2 weeks readiness, 3-4 weeks first test, 2-3 weeks per resubmission) rely on general community experience, not a specific 2026 report read here.",
     "Whether a 2GP managed package containing only an ECA can be installed in customer production orgs before any security review, and whether a Partner Business Org is strictly required, was not confirmed. Promoted 2GP versions are generally installable without listing (inferred).",
     "The exact process to register refresh-token IP ranges (a Support case per a community source, versus self-serve on the ECA per the official FAQ) is unclear. Whether the IP allowlist applies to JWT and client-credentials flows differs between sources.",
     "Composio's managed Salesforce auth was not confirmed. Its toolkit doc describes customer-owned credentials only.",
-    "The mcp_api and a2a_api scopes appear in live discovery, but their requirements were not researched."
+    "The mcp_api and a2a_api scopes appear in live discovery, but their requirements were not researched.",
+    "Unresolved: the current AppExchange security review fee. The $999-per-attempt figure (waived for free solutions, no annual fee) comes from an indexed copy of the packaging guide fee table; the newest Salesforce fee page would not render on 2026-10-27. Confirm the fee with your Partner Account Manager.",
+    "The 'Use Any API Client' change (Dec 2025 security update) was confirmed only from a search-index copy of Salesforce help article 005228838; the page itself did not render."
   ],
   "meta": {
     "generated_at": "2026-10-27",
     "generated_by": "OAuth Runway research agent (Claude Opus 5.5)",
     "mode": "library",
-    "reviewed": "Not human-reviewed. Live checks run unauthenticated via curl on 2026-10-27; no account created."
+    "reviewed": "On 2026-10-27 fact-checkers re-verified the Spring '26 Connected App block and ECA packaging (B3, partly), the Sept 2025 uninstalled-app restriction (B4, partly) and AppExchange fees/timeline (B5, wrong). Corrected the fee to $999 per review attempt (no annual fee), replaced '4-6 weeks' with Salesforce's per-stage estimates, and dropped 'Use Any API Client' as a workaround; the $999 fee page and help article 005228838 did not render, so both remain to confirm."
   }
 }

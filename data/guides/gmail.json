@@ -4,11 +4,11 @@
   "provider": "Google Cloud (Google Auth Platform / OAuth consent screen)",
   "website": "https://developers.google.com/workspace/gmail/api",
   "category": "Email",
-  "summary": "You can connect your own Gmail in about 30-60 minutes using a Google Cloud project in Testing mode, but you are limited to 100 listed test users and their refresh tokens expire after 7 days. Almost every useful Gmail scope for an agent (readonly, modify, compose, metadata) is classed as restricted. Before arbitrary users can connect you need brand verification, restricted-scope verification and an annual third-party CASA security assessment ($500-$4,500 to the assessor, per Google). Plan for 6-10 weeks to reach production, and for more if Trust & Safety stops replying.",
+  "summary": "You can connect your own Gmail in about 30-60 minutes using a Google Cloud project in Testing mode, but you are limited to 100 listed test users and their refresh tokens expire after 7 days. Almost every useful Gmail scope for an agent (readonly, modify, compose, metadata) is classed as restricted. Before arbitrary users can connect you need brand verification, restricted-scope verification and a third-party CASA security assessment (about $500-$4,500 per assessment, paid to the assessor, per Google's Health API verification docs; repeated every year). Plan for 6-10 weeks to reach production, and for more if Trust & Safety stops replying.",
   "verdict": {
     "difficulty": 4,
     "label": "Security assessment",
-    "headline": "Reading or modifying mail requires restricted scopes, and restricted scopes require Google verification plus a paid, annually renewed third-party CASA security assessment."
+    "headline": "Reading or modifying mail requires restricted scopes, and restricted scopes require Google verification plus a paid third-party CASA security assessment that must be repeated every year."
   },
   "timeline": {
     "first_connection": "30-60 minutes (Testing mode, your own account added as a test user)",
@@ -23,8 +23,8 @@
     "needed_for_production": true,
     "type": "brand/consent verification + restricted-scope verification + security assessment (CASA)",
     "trigger": "Publishing an External app that requests any sensitive scope (e.g. gmail.send) triggers verification. Any restricted scope (gmail.readonly, gmail.modify, gmail.compose, gmail.metadata, gmail.insert, gmail.settings.basic, https://mail.google.com/) additionally triggers the security assessment when restricted data is accessed from or through a third-party server, which is always the case for a hosted agent.",
-    "what_happens_without_it": "Testing status: only up to 100 listed test users, and authorizations plus refresh tokens expire 7 days after consent. In production but unverified: users see an 'unverified app' warning, and there is a lifetime cap of 100 new users that cannot be reset. Internal (Workspace org) apps avoid both, but only users in your own org can connect.",
-    "cost": "Google verification itself is free. The CASA assessor fee is paid by you: Google's App verification page states $500-$4,500 depending on complexity. Community reports put TAC Security at about $540-$720 and Prescient at $3,000 or more. The MailMate developer cites $540-$1,800 with Google's discount and $1,800-$6,300 without it. Vendor marketing (Nylas, Truto) cites $15k-$75k, which likely reflects the older pre-CASA assessment regime. It recurs every year.",
+    "what_happens_without_it": "Testing status: only up to 100 listed test users, and authorizations plus refresh tokens expire 7 days after consent. In production but unverified: users see an 'unverified app' warning, and the app is capped at 100 new users in total until it is verified (verification lifts it; Google may adjust quotas per app). Separately, the user cap on unapproved sensitive or restricted scopes applies over the project's entire lifetime and cannot be reset. Internal (Workspace org) apps avoid both, but only users in your own org can connect.",
+    "cost": "Google verification itself is free. The CASA assessor fee is paid by you: Google's Google Health API app-verification page states about $500-$4,500 per assessment, paid to the third-party assessor and depending on app complexity; Google's general restricted-scope and Gmail pages give no price. Community reports put TAC Security at about $540-$720 and Prescient at $3,000 or more. The MailMate developer cites $540-$1,800 with Google's discount and $1,800-$6,300 without it. Vendor marketing (Nylas, Truto) cites $15k-$75k, which likely reflects the older pre-CASA assessment regime. The assessment must be repeated every year, but Google does not describe the fee as a yearly price.",
     "evidence": "official",
     "source_ids": [
       "s3",
@@ -33,7 +33,11 @@
       "s7",
       "s9",
       "s10",
-      "s11"
+      "s11",
+      "s19",
+      "s17",
+      "s20",
+      "s21"
     ]
   },
   "managed_option": {
@@ -58,7 +62,7 @@
       "why": "Trust & Safety, CASA and annual recertification notices go to these addresses. Missed emails stall or revoke access."
     },
     {
-      "item": "Budget for a CASA assessor (about $540-$4,500/yr) and access to your source code or a deployed URL for scanning",
+      "item": "Budget for a CASA assessor (about $500-$4,500 per assessment, repeated every year) and access to your source code or a deployed URL for scanning",
       "why": "Required for restricted Gmail scopes."
     },
     {
@@ -135,13 +139,14 @@
       "steps": [
         {
           "title": "Add test users",
-          "detail": "Audience > Test users: add up to 100 Google accounts (including your own). Only these accounts can authorize while the app is in Testing.",
+          "detail": "Audience > Test users: add up to 100 Google accounts (including your own). Only these accounts can authorize while the app is in Testing. A test user counts against the 100-user quota as soon as they are added. Apps that request only basic identity scopes (openid/email/profile) do not need users on the list.",
           "owner": "you",
           "effort": "2 min",
           "url": "https://console.cloud.google.com/auth/audience",
           "evidence": "official",
           "source_ids": [
-            "s6"
+            "s6",
+            "s17"
           ]
         },
         {
@@ -230,13 +235,15 @@
         },
         {
           "title": "Click Publish app (Testing to In production)",
-          "detail": "Required before submitting. Unverified production apps still have the warning screen and the 100-new-user lifetime cap.",
+          "detail": "Required before submitting. Unverified production apps still have the warning screen and the cap of 100 new users in total until verification (and the lifetime, non-resettable user cap on unapproved sensitive/restricted scopes).",
           "owner": "you",
           "effort": "1 min",
           "evidence": "official",
           "source_ids": [
             "s6",
-            "s5"
+            "s5",
+            "s19",
+            "s17"
           ]
         },
         {
@@ -294,7 +301,8 @@
           "source_ids": [
             "s4",
             "s7",
-            "s9"
+            "s9",
+            "s19"
           ]
         }
       ]
@@ -363,7 +371,9 @@
       "s2",
       "s8",
       "s1",
-      "t1"
+      "t1",
+      "s16",
+      "s18"
     ]
   },
   "gotchas": [
@@ -373,7 +383,8 @@
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
-        "s2"
+        "s2",
+        "s16"
       ]
     },
     {
@@ -404,17 +415,21 @@
       "evidence": "official",
       "source_ids": [
         "s1",
-        "s6"
+        "s6",
+        "s18",
+        "s17"
       ]
     },
     {
-      "title": "The 100-user cap is lifetime and cannot be reset",
-      "detail": "Unverified production apps with sensitive or restricted scopes can onboard 100 new users in total, ever. Testing mode is separately capped at 100 listed test users. Do not burn the cap on a public beta.",
+      "title": "Two different 100-user limits for unverified apps",
+      "detail": "Unverified production apps are capped at 100 new users in total until verified; verification lifts this cap and Google says quotas may be adjusted per app. Separately, the user cap on unapproved sensitive or restricted scopes applies over the project's entire lifetime and cannot be reset. Testing mode is separately capped at 100 listed test users. Do not burn the cap on a public beta.",
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
         "s6",
-        "s5"
+        "s5",
+        "s19",
+        "s17"
       ]
     },
     {
@@ -428,13 +443,14 @@
     },
     {
       "title": "CASA is annual and costs real money",
-      "detail": "Revalidation is required every 12 months from the LOV date. Adding a new restricted scope can force reassessment. Missing the deadline risks losing access for all users.",
+      "detail": "Revalidation is required every 12 months from the LOV date. Adding a new restricted scope can force reassessment. Missing the deadline risks losing access for all users. The fee is charged per assessment (about $500-$4,500 per Google's Health API docs), so each yearly reassessment is paid again.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
         "s4",
         "s7",
-        "s11"
+        "s11",
+        "s20"
       ]
     },
     {
@@ -572,7 +588,7 @@
       "Decide on scopes and accept Google's API Services User Data Policy and terms",
       "Record and upload the demo video from your real app",
       "Click Publish app, submit verification, and personally answer Trust & Safety emails on the thread",
-      "Choose, contract and pay the CASA assessor ($500-$4,500/yr), and grant scanner access",
+      "Choose, contract and pay the CASA assessor (about $500-$4,500 per assessment, repeated every year), and grant scanner access",
       "Add test users and complete the first real consent with your own Google account"
     ]
   },
@@ -735,10 +751,52 @@
       "url": "https://console.cloud.google.com/auth/overview",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s16",
+      "title": "Verification: Gmail API scopes (A2: metadata restricted, send sensitive, labels non-sensitive)",
+      "url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s17",
+      "title": "Verification: Manage App Audience: test users and lifetime user cap (A3, A4)",
+      "url": "https://support.google.com/cloud/answer/15549945?hl=en",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s18",
+      "title": "Verification: Google OAuth 2.0 overview: 7-day Testing refresh tokens (A3)",
+      "url": "https://developers.google.com/identity/protocols/oauth2",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s19",
+      "title": "Verification: Unverified apps: 100 new users in total until verified (A4)",
+      "url": "https://support.google.com/cloud/answer/7454865",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s20",
+      "title": "Verification: Google Health API app verification: $500-$4,500 per CASA assessment (A4)",
+      "url": "https://developers.google.com/health/app-verification",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s21",
+      "title": "Verification: Restricted-scope verification (A4: no price stated)",
+      "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
-    "The CASA fee range ($500-$4,500) and the Tier 2 '2-3 weeks' figure come from a search-engine summary of Google's App verification page (developers.google.com/health/app-verification), which I did not open directly. Google's core security-assessment help page does not state fees or durations. Vendor pages (Nylas, Truto) cite $15k-$75k, which likely reflects the older pre-CASA regime.",
+    "The CASA fee range (about $500-$4,500 per assessment) was confirmed on 2026-10-27 only on Google's Google Health API app-verification page; Google's general restricted-scope and Gmail pages give no price, so the range may not reflect Gmail apps exactly. The Tier 2 '2-3 weeks' figure was not re-checked. Vendor pages (Nylas, Truto) cite $15k-$75k, which likely reflects the older pre-CASA regime.",
     "End-to-end restricted-scope timelines are community-reported and vary widely (Nango: 5-20 days when well prepared; forum threads: 1+ month stalls). Google itself says only 'several weeks'. Plan around 6-10 weeks.",
     "Google's help pages now describe CASA as assurance levels AL1/AL2, while community sources still say 'Tier 2/Tier 3'. I could not confirm which level a typical Gmail agent is assigned; most community reports indicate Tier 2 / AL2.",
     "The granular-consent timeline ('required since January 2026') is from Nango, not a Google page I opened.",
@@ -750,6 +808,6 @@
     "generated_at": "2026-10-27",
     "generated_by": "OAuth Runway research agent (Claude Opus 5.5)",
     "mode": "library",
-    "reviewed": "Not human-reviewed. Live checks run unauthenticated via curl on 2026-10-27."
+    "reviewed": "On 2026-10-27 fact-checkers re-verified the Gmail scope tiers (A2) and Testing-mode limits (A3), both confirmed, and the unverified-app cap and CASA cost (A4), which were corrected: the 100-new-user cap lifts on verification (the separate sensitive/restricted-scope user cap is the lifetime, non-resettable one), and $500-$4,500 is a per-assessment fee from Google's Health API page, not a yearly price. Still unverified: the Tier 2 CASA duration and whether the Health API fee range applies to Gmail apps."
   }
 }

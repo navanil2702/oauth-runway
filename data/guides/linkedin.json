@@ -166,7 +166,8 @@
           "evidence": "official",
           "source_ids": [
             "s2",
-            "s9"
+            "s9",
+            "s15"
           ]
         }
       ]
@@ -177,14 +178,15 @@
       "duration": "Weeks to months; no published SLA",
       "steps": [
         {
-          "title": "Create a NEW app for Community Management",
-          "detail": "Official: the Community Management API must be the only product on its app, for legal and security reasons. If the app has Sign In, Share, Ads or any pending request, the request button is greyed out. Create a separate app on the same company Page. Your user-facing sign-in/share app and your Community Management app will be different client IDs.",
+          "title": "Create a NEW app for the Community Management Development tier",
+          "detail": "Official: request the Development tier only on a new developer app that has no other API products; if the app has Sign In, Share, Ads or any pending request, the request button is greyed out. Create a separate app on the same company Page. Once Standard tier is approved, it can be added to an existing app (for example an Ads API app) by citing the approved client ID, after which the vetting app can be discarded. The docs say nothing explicit about adding Sign In with LinkedIn afterwards, so plan for your sign-in/share app and Community Management app to be different client IDs.",
           "owner": "you",
           "effort": "10 min",
           "evidence": "official",
           "source_ids": [
             "s12",
-            "s5"
+            "s5",
+            "s13"
           ]
         },
         {
@@ -249,7 +251,8 @@
           "source_ids": [
             "s4",
             "s5",
-            "s8"
+            "s8",
+            "s14"
           ]
         }
       ]
@@ -338,7 +341,8 @@
       "s7",
       "s9",
       "s10",
-      "t1"
+      "t1",
+      "s15"
     ]
   },
   "gotchas": [
@@ -359,25 +363,28 @@
       "evidence": "official",
       "source_ids": [
         "s5",
-        "s3"
+        "s3",
+        "s14"
       ]
     },
     {
-      "title": "Community Management needs its own app, so you will run two client IDs",
-      "detail": "The Community Management API must be the only product on its developer app. Apps with Sign In with LinkedIn, Share on LinkedIn or Ads get a greyed-out request button. An agent that wants both OIDC login and Page management needs a separate app, with its own consent and tokens, for the Community Management scopes.",
+      "title": "Community Management Development tier needs a fresh app, so plan for two client IDs",
+      "detail": "LinkedIn says to request the Development tier only on a new developer app with no other API products. Apps with Sign In with LinkedIn, Share on LinkedIn or Ads get a greyed-out request button. After Standard tier is approved it can be moved onto an existing app (e.g. an Ads API app) by citing the approved client ID; the docs do not say whether Sign In with LinkedIn can be added afterwards. An agent that wants both OIDC login and Page management should plan for a separate app, with its own consent and tokens, for the Community Management scopes.",
       "impact": "nuance",
       "evidence": "official",
       "source_ids": [
-        "s12"
+        "s12",
+        "s13"
       ]
     },
     {
       "title": "Rejection means a new app, not a resubmission",
-      "detail": "If the Development or Standard tier request is rejected you cannot reapply with that app. You must create a new app and restart from the Development-tier form. Keep Community Management on a dedicated app, and get the use case right against the restricted-use-cases list before submitting.",
+      "detail": "If the Development or Standard tier request is rejected you cannot reapply with that app. You must create a new app and restart from the Development-tier form (this applies to both Development and Standard tier). A vetting appeal through the Developer Support contact form is a separate path that applies only to identity-vetting denials. Keep Community Management on a dedicated app, and get the use case right against the restricted-use-cases list before submitting.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
-        "s5"
+        "s5",
+        "s14"
       ]
     },
     {
@@ -391,12 +398,13 @@
     },
     {
       "title": "No refresh tokens for self-serve apps: 60-day hard expiry",
-      "detail": "Without MDP partner status there is no refresh_token grant. A background agent will lose access after 60 days unless the user comes back through the authorize redirect (silent only if they are still logged in and the token is unexpired). Track expiry and prompt users to re-connect.",
+      "detail": "Without MDP partner status there is no refresh_token grant. A background agent will lose access after 60 days unless the user comes back through the authorize redirect (silent only if they are still logged in and the token is unexpired). Programmatic refresh tokens (365-day fixed TTL) are available only to a limited set of approved partners (e.g. MDP / vetted marketing APIs). Track expiry and prompt users to re-connect.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
         "s2",
-        "s9"
+        "s9",
+        "s15"
       ]
     },
     {
@@ -405,7 +413,8 @@
       "impact": "nuance",
       "evidence": "official",
       "source_ids": [
-        "s2"
+        "s2",
+        "s15"
       ]
     },
     {
@@ -458,10 +467,11 @@
   "blockers": [
     {
       "symptom": "'Community Management API' request button is greyed out on the Products tab",
-      "what_to_do": "It must be the only product on its app. Create a new app on the same company Page with no other products or pending requests, and request it there.",
+      "what_to_do": "The Development tier can only be requested on a new app with no other API products or pending requests. Create a new app on the same company Page and request it there. After Standard tier approval you can add it to an existing app by citing the approved client ID.",
       "evidence": "official",
       "source_ids": [
-        "s12"
+        "s12",
+        "s13"
       ]
     },
     {
@@ -512,7 +522,8 @@
       "evidence": "official",
       "source_ids": [
         "s5",
-        "s12"
+        "s12",
+        "s14"
       ]
     },
     {
@@ -716,6 +727,27 @@
       "url": "https://api.linkedin.com/v2/userinfo",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s13",
+      "title": "Verification: Community Management API overview FAQ (B6)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s14",
+      "title": "Verification: Community Management app review (B6)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s15",
+      "title": "Verification: 3-legged OAuth authorization code flow (B7)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
@@ -724,12 +756,13 @@
     "That r_member_social is closed to new requests comes from the third-party guide (s8). It does not appear in the official open-permissions list, which supports the claim but does not state it.",
     "The exact Developer Portal create-app form fields (privacy policy URL required vs optional, logo size) were not observed because app creation needs a signed-in account.",
     "The authorize endpoint returned an HTTP 200 error page for an invalid client_id, whereas the docs list 401. The exact behavior for a valid client with an unprovisioned scope or mismatched redirect could not be tested without a real client ID.",
-    "Composio managed-auth support for LinkedIn and which scopes it carries were not researched."
+    "Composio managed-auth support for LinkedIn and which scopes it carries were not researched.",
+    "Whether Sign In with LinkedIn (OIDC) can be added to an app that already holds Standard-tier Community Management access: LinkedIn's docs (re-checked 2026-10-27) say nothing explicit about it."
   ],
   "meta": {
     "generated_at": "2026-10-27",
     "generated_by": "OAuth Runway investigator agent (Claude)",
     "mode": "library",
-    "reviewed": "Not human-reviewed. Live checks were run unauthenticated with curl on 2026-10-27."
+    "reviewed": "On 2026-10-27 fact-checkers re-verified the Community Management app rules (B6, partly) and self-serve token lifetimes (B7, confirmed). Corrected 'must be the only product on its app' to 'request Development tier on a new app with no other products; Standard tier can later be added to an existing app'; still unverified whether Sign In with LinkedIn can be added to that app afterwards."
   }
 }

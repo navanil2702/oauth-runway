@@ -28,13 +28,13 @@ The gap between those two clocks is the product. The 7 library apps were chosen 
 | App | Difficulty | Users can connect in | What decides it |
 |---|---|---|---|
 | GitHub | 2/5 | Same day | No review, but each org owner must install or approve the app |
-| Notion | 2/5 | Same day | Self-serve; users pick which pages the agent can see at consent |
+| Notion | 2/5 | Days after you submit for review (no stated wait) | No Marketplace review needed; users pick which pages the agent can see at consent |
 | Outlook | 3/5 | 1 day to 4+ weeks | Publisher verification needs a vetted Microsoft partner account; tenant consent policies may require admin approval |
 | Gmail | 4/5 | 6-10 weeks | Reading mail needs restricted scopes, which need Google verification plus a paid annual CASA security assessment |
 | Slack | 4/5 | 2-4 months | Installs work right away, but unlisted commercial apps are rate limited, and Marketplace review is slow |
 | Salesforce | 4/5 | 1-3 weeks + each customer installs | New Connected Apps are off; External Client Apps must be packaged and installed per org |
 | LinkedIn | 4/5 | 1-3+ months | Self-serve scopes only sign in and post; anything more is a vetted partner program |
-| Dropbox (live run) | see guide | see guide | Generated on demand to show the live path |
+| Dropbox (live run) | 3/5 | Same day (dev mode, up to 500 users) | Review starts at 50 linked users; you then have 2 weeks to get production approval |
 
 ## Key decisions
 
@@ -97,7 +97,28 @@ The last one bundles everything into one HTML file for a claude.ai Artifact. In 
 
 ## Verification
 
-VERIFICATION_PLACEHOLDER
+Two independent checker agents re-verified **15 high-stakes claims** from six guides against primary sources. Each checker saw only the claim, not the original agent's sources. Results: **6 confirmed, 8 partly right, 1 wrong.** All corrections were applied to the guides, and each guide records the check in `meta.reviewed`. Per-claim details and sources: [verification/REPORT.md](verification/REPORT.md).
+
+What I learned from it:
+
+- **The verdicts held; the details drifted.** No guide's difficulty or headline changed. Errors clustered in four patterns:
+  - **Stale numbers.** Salesforce's security review fee was the pre-2023 $2,550 + $150/yr; it is now $999 per review attempt and free for free apps.
+  - **Two similar limits merged into one.** Google has a 100-new-user cap for unverified apps, which verification lifts, and a separate lifetime cap that cannot be reset for unapproved sensitive scopes.
+  - **Rules stated too broadly.** Slack's "don't store Slack data" applies to Agent/Assistant-UI apps only. LinkedIn's "only product on the app" applies only when requesting the Development tier. Microsoft's consent policy is not limited to multi-tenant apps.
+  - **Rollout dates.** Microsoft added mail and calendar scopes to the blocked-consent list around Nov 2025, not mid-2025. Salesforce's "Use Any API Client" stopped working for uninstalled apps in Dec 2025.
+
+  So for scaling, the verifier pass should target numbers, dates and words like "only/always/never". Those are where a single research pass goes wrong.
+- **Live checks caught where the docs are wrong or silent.**
+  - LinkedIn returns an HTTP 200 error page for a bad `client_id`, not the documented 401. Its discovery `issuer` (`https://www.linkedin.com/oauth`) differs from the docs, which can break strict ID-token validation.
+  - GitHub's token endpoint answers an unknown client with a 404, not `incorrect_client_credentials`.
+  - Microsoft only reveals a bad client ID after sign-in.
+
+  These are now gotchas in the guides.
+- **Still unresolved, and labeled as such in the guides:**
+  - Whether Slack's limits for unlisted apps now apply to installs made before May 2025: Slack's own pages disagree.
+  - Salesforce's current fee page didn't load; the figure comes from the indexed version.
+  - Microsoft's rollout dates come from third-party blogs.
+  - Most review wait times come from developer reports, not published SLAs.
 
 ## Limitations
 

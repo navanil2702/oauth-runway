@@ -31,7 +31,8 @@
       "s4",
       "s5",
       "s6",
-      "s9"
+      "s9",
+      "s14"
     ]
   },
   "managed_option": {
@@ -49,7 +50,7 @@
     },
     {
       "item": "10+ separate active workspaces using the app (for Marketplace)",
-      "why": "Submissions are blocked below 10 workspaces that were active in the last 28 days, and the count must hold throughout the review."
+      "why": "Submissions are blocked below 10 workspaces that were active (used) in the last 28 days; sandboxes do not count, and the count must hold throughout the review. The guidelines also reject apps with fewer than 10 weekly active users."
     },
     {
       "item": "Public landing page, privacy policy and support page",
@@ -158,12 +159,13 @@
       "steps": [
         {
           "title": "Prepare listing assets and AI disclosures",
-          "detail": "You need a landing page (public, built for the Slack app, with install path and privacy link), a privacy policy (data collected, use, retention, access/deletion, contact), a support page, a short description of 10 words or fewer, a long description with an LLM-inaccuracy disclaimer, at least one 1600x1000 image, and the model used plus retention, tenancy and residency in Security & Compliance. Agent/assistant apps must be zero-copy: store metadata only and fetch Slack data in real time.",
+          "detail": "You need a landing page (public, built for the Slack app, with install path and privacy link), a privacy policy (data collected, use, retention, access/deletion, contact), a support page, a short description of 10 words or fewer, a long description with an LLM-inaccuracy disclaimer, at least one 1600x1000 image, and the model used plus retention, tenancy and residency in Security & Compliance. Apps that use the Agent/Assistant UI must be zero-copy: do not store Slack data, store metadata only and fetch in real time. Every AI app must disclose data retention, tenancy and residency.",
           "owner": "agent+you",
           "effort": "1 day",
           "evidence": "official",
           "source_ids": [
-            "s6"
+            "s6",
+            "s18"
           ]
         },
         {
@@ -184,7 +186,8 @@
           "effort": "up to 10 business days",
           "evidence": "official",
           "source_ids": [
-            "s5"
+            "s5",
+            "s17"
           ]
         },
         {
@@ -195,7 +198,8 @@
           "evidence": "official",
           "source_ids": [
             "s5",
-            "s10"
+            "s10",
+            "s17"
           ]
         }
       ]
@@ -271,11 +275,13 @@
   "gotchas": [
     {
       "title": "Unlisted commercial apps are throttled to 1 history call per minute",
-      "detail": "Since 29 May 2025, new unlisted (non-Marketplace) commercially distributed apps, and new installs of existing ones, get Tier 1 on conversations.history and conversations.replies: about 1 request/minute, with limit max/default of 15 objects. Internal customer-built apps keep Tier 3 (50+/min, up to 1,000 objects). An agent that summarizes or answers over channel history is close to unusable at this rate.",
+      "detail": "Since 29 May 2025, new unlisted (non-Marketplace) commercially distributed apps, and new installs of existing ones, get Tier 1 on conversations.history and conversations.replies: about 1 request/minute, with limit max/default of 15 objects. Internal customer-built apps keep Tier 3 (50+/min, up to 1,000 objects). Whether installs made before 29 May 2025 are also covered is unresolved (see uncertainties). An agent that summarizes or answers over channel history is close to unusable at this rate.",
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
-        "s3"
+        "s3",
+        "s14",
+        "s15"
       ]
     },
     {
@@ -289,23 +295,27 @@
     },
     {
       "title": "You need 10 active installs before you can even submit",
-      "detail": "Since July 2026, Marketplace submission requires 10+ workspaces active in the last 28 days, maintained for the whole review. You have to collect pilots while running on the throttled unlisted tier.",
+      "detail": "Since July 2026 (raised from the 5 installs required from August 2025), Marketplace submission requires 10+ workspaces active in the last 28 days, maintained for the whole review. Sandboxes do not count, and the guidelines also reject apps with fewer than 10 weekly active users. You have to collect pilots while running on the throttled unlisted tier.",
       "impact": "delay",
       "evidence": "official",
       "source_ids": [
         "s4",
-        "s5"
+        "s5",
+        "s16",
+        "s17",
+        "s18"
       ]
     },
     {
-      "title": "Agents must be zero-copy, and Slack data cannot train LLMs",
-      "detail": "The developer policy prohibits using Slack data to train an LLM under any circumstances, and requires deleting data within 14 business days of uninstall. Marketplace guidelines say Agent/Assistant apps must not store Slack data: keep metadata and fetch in real time. RTS results may not be stored or copied. A RAG design that indexes the workspace will be rejected.",
+      "title": "No training on Slack data; Agent/Assistant UI apps must be zero-copy",
+      "detail": "The developer policy and the Marketplace guidelines (both the unsuitable-apps list and the generative-AI rules) prohibit using Slack data to train an LLM, and the developer policy requires deleting data within 14 business days of uninstall. The no-storage rule is narrower: apps using the Agent/Assistant UI must not store Slack data they obtain (store metadata only, i.e. zero-copy). The general generative-AI section does not ban storage but requires you to disclose retention, data tenancy and data residency. RTS results may not be stored or copied. A RAG design that indexes the workspace will be rejected if you use the Agent/Assistant UI or RTS. Requests for *:history and similar scopes trigger enhanced review.",
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
         "s12",
         "s6",
-        "s11"
+        "s11",
+        "s18"
       ]
     },
     {
@@ -314,7 +324,8 @@
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
-        "s6"
+        "s6",
+        "s18"
       ]
     },
     {
@@ -324,7 +335,8 @@
       "evidence": "official",
       "source_ids": [
         "s5",
-        "s10"
+        "s10",
+        "s17"
       ]
     },
     {
@@ -402,10 +414,11 @@
     },
     {
       "symptom": "Marketplace submission button blocked",
-      "what_to_do": "You have fewer than 10 workspaces active in the last 28 days. Grow pilots first. Exemptions apply only to security/compliance partners using the Discovery API.",
+      "what_to_do": "You have fewer than 10 workspaces active in the last 28 days (sandboxes do not count). Grow pilots first. Exemptions apply only to security/compliance partners using the Discovery API.",
       "evidence": "official",
       "source_ids": [
-        "s5"
+        "s5",
+        "s16"
       ]
     },
     {
@@ -423,7 +436,7 @@
       "Generate the full app manifest (bot/user scopes, redirect URLs, events, token rotation setting) for you to paste into 'Create New App > From a manifest'",
       "Implement the OAuth v2 install flow, state check, per-team token storage, refresh with grant_type=refresh_token, and request-signature verification",
       "Implement uninstall handling (app_uninstalled/tokens_revoked) and the 14-business-day data deletion",
-      "Redesign data access to be zero-copy (metadata only, real-time fetch) and to use Events API instead of polling history",
+      "Redesign data access to be zero-copy (metadata only, real-time fetch; required for Agent/Assistant UI apps) and to use Events API instead of polling history, and draft the retention/tenancy/residency disclosure",
       "Draft the landing page, privacy policy (collection, use, retention, deletion, LLM model, tenancy, residency) and support page copy",
       "Write per-scope Marketplace justifications, the short and long descriptions with the LLM-inaccuracy disclaimer, and the demo-video script",
       "Probe endpoints and decode OAuth errors (bad_redirect_uri, invalid_code, unapproved_scope)"
@@ -582,11 +595,46 @@
       "url": "https://api.slack.com/apps",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s14",
+      "title": "Verification: Slack changelog 2025-05-29: rate-limit changes for non-Marketplace apps (A5; says existing installs not impacted)",
+      "url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s15",
+      "title": "Verification: Legacy api.slack.com deprecations changelog (A5; still says existing installs from March 3, 2026)",
+      "url": "https://api.slack.com/changelog/deprecations",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s16",
+      "title": "Verification: Slack changelog 2026-09-01: Marketplace 10-install requirement (A6)",
+      "url": "https://docs.slack.dev/changelog/2026/09/01/slack-marketplace-install-requirement",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s17",
+      "title": "Verification: Slack Marketplace review guide (A6)",
+      "url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s18",
+      "title": "Verification: Slack Marketplace app guidelines and requirements (A7)",
+      "url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
-    "Date for existing unlisted installs: the canonical May 2025 changelog now says existing installs of unlisted distributed apps are not subject to the new limits. A long-form changelog page (api.slack.com/changelog/2026-02-real-time-search-api, read via summarizer) and search snippets say they apply from 3 March 2026, and an earlier version said 2 September 2025. Plan as if every unlisted install is on Tier 1.",
-    "The conversations.history reference page, as summarized, showed only 'Tier 3: 50+ per minute' and max limit 999, with no unlisted-app note. It is unclear whether the note was dropped or missed by the summarizer. The changelog is the authoritative statement used here.",
+    "Unresolved: whether installs made before 29 May 2025 became subject to the Tier 1 limit on 3 March 2026. The current docs.slack.dev changelog entry (which the old api.slack.com FAQ URL now redirects to) says existing installs 'will not be impacted' and gives no date, while Slack's legacy api.slack.com changelog index pages still say the limits apply to existing installs 'on March 3, 2026' (an earlier version said 2 September 2025). Re-checked on 2026-10-27: no Slack post confirms enforcement on older installs. Test against a real pre-May-2025 install, and plan as if every unlisted install is on Tier 1.",
+    "The conversations.history reference page still lists only Tier 3 (50+ per minute), with no unlisted-app note (re-confirmed 2026-10-27). The May 2025 changelog is the authoritative statement of the Tier 1 limit used here.",
     "Real-world review times: no first-hand 2025-2026 community reports found. Timelines come only from Slack's own maxima (10 business days + 10 weeks); actual queues may be shorter or, with feedback rounds, longer.",
     "Redirect rules conflict: Installing with OAuth says redirect_uri must use HTTPS, while the PKCE guide says http://localhost is allowed (as a server redirect without PKCE). Not tested, because that needs a real client_id.",
     "Exact RTS API rate limits are on the assistant.search.context method page, which was not read.",
@@ -597,6 +645,6 @@
     "generated_at": "2026-10-27",
     "generated_by": "Claude (OAuth Runway investigator agent)",
     "mode": "library",
-    "reviewed": "Not reviewed by a human or second agent."
+    "reviewed": "On 2026-10-27 fact-checkers re-verified the unlisted-app rate limit (A5, partly), the 10-install Marketplace gate and review times (A6, confirmed) and the MCP/AI data rules (A7, partly); the no-storage rule was narrowed to Agent/Assistant UI apps (all AI apps must disclose retention) and install-gate details were added. Still unresolved: whether pre-29-May-2025 installs became subject to Tier 1 on 3 March 2026."
   }
 }

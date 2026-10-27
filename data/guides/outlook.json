@@ -4,11 +4,11 @@
   "provider": "Microsoft Entra ID (Microsoft identity platform)",
   "website": "https://learn.microsoft.com/en-us/graph/outlook-mail-concept-overview",
   "category": "Email & calendar",
-  "summary": "Registering a multitenant Entra app and connecting your own mailbox takes ~20 minutes and there is no Microsoft app review. Publisher verification (free, via a verified Microsoft AI Cloud Partner Program account) is fast once Partner Center vetting clears, which can take days to weeks. What matters most: since mid-2025 Microsoft's default consent policy stops end users in many work tenants from consenting to Mail.*/Calendars.* scopes, even for verified apps, so plan on a tenant admin consenting for each customer org.",
+  "summary": "Registering a multitenant Entra app and connecting your own mailbox takes ~20 minutes and there is no Microsoft app review. Publisher verification (free, via a verified Microsoft AI Cloud Partner Program account) is fast once Partner Center vetting clears, which can take days to weeks. What matters most: in tenants on 'Let Microsoft manage your consent settings' (the default for new tenants), Microsoft's managed consent policy stops end users from consenting to Mail.*/Calendars.*/MailboxSettings.* scopes for any app, verified or not (mail and calendar scopes were added around Nov 2025), so plan on a tenant admin consenting for each customer org.",
   "verdict": {
     "difficulty": 3,
     "label": "Admin consent",
-    "headline": "No Microsoft app review, but tenants on Microsoft's default consent policy need an admin to approve Mail/Calendar scopes for each customer org. Verification alone does not lift that."
+    "headline": "No Microsoft app review, but tenants on Microsoft's managed default consent policy need an admin to approve Mail/Calendar scopes for each customer org. Verification alone does not lift that."
   },
   "timeline": {
     "first_connection": "15-30 minutes (your own tenant or a personal Outlook.com account)",
@@ -22,7 +22,7 @@
   "approval": {
     "needed_for_production": true,
     "type": "brand/consent verification (publisher verification) + per-tenant admin consent",
-    "trigger": "A multitenant app (registered after Nov 8 2020) asking users in other tenants for permissions beyond sign-in/profile. Mail.*, Calendars.*, Contacts.ReadWrite, MailboxSettings.* and Tasks.* are excluded from end-user consent under the Microsoft-managed default consent policy.",
+    "trigger": "A multitenant app (registered after Nov 8 2020) asking users in other tenants for permissions beyond sign-in/profile. Separately, for every app (not only multitenant ones), Mail.*, Calendars.*, MailboxSettings.*, Contacts.ReadWrite, Contacts.*.Shared, Tasks.*, People.Read and EAS/EWS/IMAP/POP access are excluded from end-user consent in tenants still on the Microsoft-managed default consent policy ('Let Microsoft manage your consent settings').",
     "what_happens_without_it": "Unverified: with risk-based step-up consent, users in other tenants cannot consent and get a risky/unverified-publisher warning. Tenants that allow only verified-publisher apps block you outright. Even when verified: tenants on the Microsoft-managed default policy, or with user consent disabled, show 'Need admin approval' and require an admin grant via /adminconsent or the admin consent workflow. Personal Microsoft accounts are not governed by tenant consent policies.",
     "cost": "Free. Publisher verification and CPP enrollment have no fee. Optional Microsoft 365 Certification needs a paid third-party audit (contract with Claranet); the price is not published.",
     "evidence": "official",
@@ -30,7 +30,9 @@
       "s1",
       "s2",
       "s3",
-      "s4"
+      "s4",
+      "s16",
+      "s17"
     ]
   },
   "managed_option": {
@@ -44,11 +46,11 @@
     },
     {
       "item": "A DNS-verified custom domain in that tenant, matching your company email domain",
-      "why": "The publisher domain can't be *.onmicrosoft.com and must match the domain of the Partner Center primary contact email."
+      "why": "The email domain used in CPP verification must match the app's publisher domain or be a DNS-verified custom domain in the tenant; *.onmicrosoft.com does not qualify."
     },
     {
       "item": "Microsoft AI Cloud Partner Program (formerly MPN) account, Partner Global Account, fully vetted",
-      "why": "Its Partner One ID is what publisher verification attaches to the app."
+      "why": "Its Partner One ID is what publisher verification attaches to the app. It must be the partner global account (PGA) ID, not a location ID, and the app's tenant must be associated with the PGA. Verification is free."
     },
     {
       "item": "MFA on the admin user who performs verification",
@@ -184,25 +186,27 @@
       "steps": [
         {
           "title": "Verify your custom domain in the Entra tenant and set it as the app's publisher domain",
-          "detail": "DNS TXT record. Can't be *.onmicrosoft.com. Must match the Partner Center primary contact email domain, or you'll hit PublisherDomainMismatch.",
+          "detail": "DNS TXT record. Can't be *.onmicrosoft.com. The email domain used in CPP verification must match the app's publisher domain or be a DNS-verified custom domain in the tenant, or you'll hit PublisherDomainMismatch.",
           "owner": "you",
           "effort": "15 min + DNS propagation",
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s2"
+            "s2",
+            "s17"
           ]
         },
         {
           "title": "Enroll in the Microsoft AI Cloud Partner Program and complete verification",
-          "detail": "Sign in at partner.microsoft.com with a user from the same tenant. Provide your legal business profile; email and employment verification follow. Use the PartnerGlobal (not location) Partner One ID.",
+          "detail": "Sign in at partner.microsoft.com with a user from the same tenant. Provide your legal business profile; email and employment verification follow. Use the partner global account (PGA) Partner One ID; a location ID will not work. Associate the app's tenant with the PGA, and register the app with a work/school account.",
           "owner": "you",
           "effort": "30-60 min",
           "url": "https://partner.microsoft.com/dashboard/account/v3/enrollment/joinnow/basicpartnernetwork/new",
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s2"
+            "s2",
+            "s17"
           ]
         },
         {
@@ -224,18 +228,20 @@
           "evidence": "official",
           "source_ids": [
             "s1",
-            "s2"
+            "s2",
+            "s17"
           ]
         },
         {
           "title": "Ship an admin-consent onboarding flow and docs for customer IT",
-          "detail": "A 'Connect your organization' button that hits /adminconsent, an explanation of every scope, and instructions for approving via the admin consent workflow. Expect tenants with the Microsoft-managed default policy to need this.",
+          "detail": "A 'Connect your organization' button that hits /adminconsent, an explanation of every scope, and instructions for approving via the admin consent workflow. Expect tenants still on the Microsoft-managed default policy to need this for any app, verified or not.",
           "owner": "agent+you",
           "effort": "2-3 hours",
           "evidence": "official",
           "source_ids": [
             "s3",
-            "s9"
+            "s9",
+            "s16"
           ]
         },
         {
@@ -272,7 +278,7 @@
       {
         "scope": "Mail.Send",
         "tier": "user-consentable",
-        "note": "Not on the Microsoft-managed exclusion list as of the Learn page read. Tenant custom policies may still block it."
+        "note": "Not on the Microsoft-managed exclusion list as of the Learn page updated 2026-08-28. Tenant custom policies may still block it."
       },
       {
         "scope": "Calendars.Read / Calendars.ReadWrite",
@@ -302,18 +308,20 @@
       "s6",
       "s7",
       "s8",
-      "t1"
+      "t1",
+      "s16"
     ]
   },
   "gotchas": [
     {
       "title": "The default consent policy blocks end-user consent to Mail/Calendar scopes",
-      "detail": "The 'Let Microsoft manage your consent settings' policy is the default for new tenants and, per community reports, was rolled out to tenants on default settings in July-August 2025. It lets users consent to delegated permissions except Files/Sites.*, Mail.Read/ReadWrite/ReadBasic, Calendars.*, MailboxSettings.*, Contacts.ReadWrite, Tasks.*, People.Read and others. Microsoft documents no verified-publisher exemption; only a short allowlist of mail clients (Apple Mail, Thunderbird, Spark...) is exempt. So in many tenants an admin must consent for an Outlook agent.",
+      "detail": "'Let Microsoft manage your consent settings' is the default for new tenants. It lets users consent to any user-consentable delegated permission except a list that, per Learn (updated 2026-08-28), includes Mail.*, Calendars.*, MailBoxSettings.*, Contacts.ReadWrite, Contacts.*.Shared, Tasks.*, People.Read and EAS/EWS/IMAP/POP (Files/Sites.* are also excluded); Contacts.Read and Mail.Send are not listed. The rule applies to every app on a user-consent request, not only multitenant apps, but only in tenants still on the Microsoft-managed setting. Timeline per secondary blogs: the mid-2025 rollout blocked only Files.Read(Write).All and Sites.Read(Write).All; mail, calendar, mailbox and Teams scopes were added around Nov 2025, and Contacts/Tasks/People-type scopes in 2026. There is no verified-publisher exemption; the only exemption is a separate Microsoft policy for named mail clients (Apple Mail, Spark, eM Client, Thunderbird, etc.). So in these tenants an admin must consent for an Outlook agent; point users at the admin consent workflow.",
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
         "s3",
-        "s13"
+        "s13",
+        "s16"
       ]
     },
     {
@@ -322,7 +330,8 @@
       "impact": "blocker",
       "evidence": "official",
       "source_ids": [
-        "s1"
+        "s1",
+        "s17"
       ]
     },
     {
@@ -391,7 +400,8 @@
       "source_ids": [
         "s3",
         "s9",
-        "s4"
+        "s4",
+        "s16"
       ]
     },
     {
@@ -412,10 +422,11 @@
     },
     {
       "symptom": "PublisherDomainMismatch / NoPublisherDomainOnApplication",
-      "what_to_do": "Verify the domain of the Partner Center primary contact email as a custom domain in Entra and set it as the app's publisher domain.",
+      "what_to_do": "Make the email domain used in CPP verification match the app's publisher domain, or verify it as a custom domain in Entra and set it as the app's publisher domain (*.onmicrosoft.com does not qualify).",
       "evidence": "official",
       "source_ids": [
-        "s2"
+        "s2",
+        "s17"
       ]
     },
     {
@@ -641,11 +652,25 @@
       "url": "https://graph.microsoft.com/v1.0/me/messages",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s16",
+      "title": "Verification: Manage app consent policies (Learn, updated 2026-08-28; B1)",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-app-consent-policies",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s17",
+      "title": "Verification: Publisher verification overview (B2)",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
-    "Which tenants actually run the Microsoft-managed consent policy. Learn says it's the default for new tenants. Community sources say it rolled out to default-setting tenants in Jul-Aug 2025, and tenants with custom or legacy settings are unaffected. We couldn't see what share of real customer tenants it covers.",
-    "Learn's exclusion list names Mail.Read/ReadWrite/ReadBasic but not Mail.Send or Contacts.Read. Microsoft can change a managed policy without notice. Re-check the list before launch.",
+    "Which tenants actually run the Microsoft-managed consent policy. Learn says it's the default for new tenants; tenants with custom or legacy settings are unaffected. The rollout dates (Files/Sites mid-2025, mail/calendar/mailbox/Teams around Nov 2025, Contacts/Tasks/People-type in 2026) come from secondary blogs (topedia, Nov 2025 and May 2026); the Microsoft message center posts could not be reached on 2026-10-27. We couldn't see what share of real customer tenants it covers.",
+    "As of the Learn page updated 2026-08-28 (re-checked 2026-10-27), the exclusion list names Mail.*, Calendars.*, MailBoxSettings.*, Contacts.ReadWrite, Contacts.*.Shared, Tasks.*, People.Read and EAS/EWS/IMAP/POP, but not Mail.Send or Contacts.Read. Microsoft can change a managed policy without notice. Re-check the list before launch.",
     "Whether risk-based step-up consent is still active in the same form in 2026. The publisher verification page still cites the Nov 2020 rule (page updated 2026-06-15).",
     "Partner Center vetting time has no SLA. Estimates are from community threads and range from same day to months.",
     "Personal (MSA) consent experience for unverified apps: we inferred that tenant consent policies don't apply and that users see an unverified label but can consent. We couldn't confirm this without an account.",
@@ -657,6 +682,6 @@
     "generated_at": "2026-10-27",
     "generated_by": "Claude (claude-opus-5-5) OAuth Runway investigator",
     "mode": "library",
-    "reviewed": "Not human-reviewed. Live checks are unauthenticated only."
+    "reviewed": "On 2026-10-27 fact-checkers re-verified the Microsoft-managed consent policy (B1, partly) and publisher-verification requirements (B2, confirmed). Corrected the policy timeline (mail/calendar scopes added around Nov 2025, not mid-2025) and its scope (every app, only in tenants on the Microsoft-managed setting), and added PGA/domain details; rollout dates still rest on secondary blogs because the Microsoft message center posts were unreachable."
   }
 }

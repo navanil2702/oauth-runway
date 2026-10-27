@@ -93,7 +93,7 @@
   // ---------- backends ----------
   const serverBackend = {
     label: "Local server",
-    async status() { try { const r = await fetch("api/status"); return (await r.json()).live ? "live generation on" : "live generation off: set ANTHROPIC_API_KEY"; } catch { return ""; } },
+    async status() { try { const r = await fetch("api/status"); return (await r.json()).live ? "live generation on" : "live generation off (no API key)"; } catch { return ""; } },
     async list() { const r = await fetch("api/guides"); return r.json(); },
     async generate(appName, onEvent) {
       const r = await fetch("api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ app: appName }) });

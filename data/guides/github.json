@@ -165,13 +165,14 @@
         },
         {
           "title": "Disable wildcard redirect matching",
-          "detail": "Since August 2026 the per-URI wildcard toggle is visible. Apps with a single redirect URI have it on by default (legacy behavior). Turn it off unless you control every subdomain and path.",
+          "detail": "Since August 2026 the per-URI wildcard toggle is visible. Apps that had a single callback URL before 2026-08-03 have it on (legacy behavior). Turn it off unless you control every subdomain and path.",
           "owner": "you",
           "effort": "2 min",
           "evidence": "official",
           "source_ids": [
             "s8",
-            "s6"
+            "s6",
+            "s13"
           ]
         }
       ]
@@ -218,9 +219,9 @@
     "console_url": "https://github.com/settings/apps",
     "authorize_url": "https://github.com/login/oauth/authorize",
     "token_url": "https://github.com/login/oauth/access_token",
-    "redirect_uri_rules": "Exact match against up to 10 registered callback URLs. Wildcard (subdomain/subpath) matching is a per-URI toggle and is on by default for legacy single-URI apps. Loopback callbacks (http://127.0.0.1/path) accept any port. If redirect_uri is omitted, the first callback URL is used.",
+    "redirect_uri_rules": "Exact match against up to 10 registered callback URLs. Wildcard (subdomain/subpath) matching is a per-URI toggle and was turned on for apps that had a single callback URL before 2026-08-03. Wildcard matching accepts subpaths; the changelog also mentions subdomains, but the docs say the host must match exactly apart from subdomains, so verify subdomain behavior before relying on it. Loopback callbacks (http://127.0.0.1/path) accept any port. If redirect_uri is omitted, the first callback URL is used.",
     "pkce": "Supported. S256 only; plain is rejected.",
-    "refresh_tokens": "GitHub App user tokens: 8h access and 6-month refresh, rotated on every use (unless expiry is disabled in settings). OAuth Apps: since Aug 2026, short-lived tokens are default for new apps, and existing apps opt in via the offline_access scope or a 'force' setting. Legacy OAuth tokens don't expire. A limit of 10 tokens per user/app/scope applies (older tokens are revoked).",
+    "refresh_tokens": "GitHub App user tokens: 8h access and 6-month refresh, rotated on every use (unless expiry is disabled in settings). OAuth Apps: since Aug 2026, short-lived tokens are default for new apps, and existing apps opt in via the offline_access scope or by forcing expiration app-wide. Turning it on does not expire tokens already issued, and the 6-month refresh-token lifetime counts from last use. Legacy OAuth tokens don't expire. A limit of 10 tokens per user/app/scope applies (older tokens are revoked).",
     "scopes": [
       {
         "scope": "GitHub App: contents (read/write)",
@@ -268,7 +269,8 @@
       "s2",
       "s3",
       "s6",
-      "s8"
+      "s8",
+      "s13"
     ]
   },
   "gotchas": [
@@ -321,11 +323,12 @@
     },
     {
       "title": "Legacy wildcard redirect matching",
-      "detail": "Single-callback apps match subdomains and subpaths by default. Disable it to avoid code-interception risk.",
+      "detail": "Apps that had a single callback URL before 2026-08-03 had wildcard matching turned on for that URL. It accepts subpaths (the changelog also mentions subdomains; check this detail). Disable it to avoid code-interception risk.",
       "impact": "nuance",
       "evidence": "official",
       "source_ids": [
-        "s8"
+        "s8",
+        "s13"
       ]
     },
     {
@@ -550,6 +553,13 @@
       "url": "https://github.com/settings/apps/new",
       "kind": "test",
       "accessed": "2026-10-27"
+    },
+    {
+      "id": "s13",
+      "title": "Verification: GitHub changelog 2026-08-14: multiple redirect URIs and token refresh for OAuth Apps (re-checked A1)",
+      "url": "https://github.blog/changelog/2026-08-14-multiple-redirect-uris-and-token-refresh-for-oauth-apps",
+      "kind": "official",
+      "accessed": "2026-10-27"
     }
   ],
   "uncertainties": [
@@ -558,12 +568,12 @@
     "We could not observe what the authorize endpoint shows for a bad client_id or redirect_uri after login (no account). Docs say redirect_uri_mismatch, but the exact UI wasn't seen.",
     "The incorrect_client_credentials error (valid client_id, wrong secret) is documented but untested, because we had no valid client_id. Our probes only produced 404 for unknown IDs.",
     "The SAML SSO behavior for GitHub App user tokens comes from a community (HashiCorp) article plus doc summaries. The exact 403 message text from GitHub wasn't captured.",
-    "The changelog says short-lived tokens are 'default for new' OAuth apps, while older docs describe them as opt-in. Check the 'expire tokens' setting on your app after creating it."
+    "Wildcard redirect matching and subdomains: the 2026-08-14 changelog mentions subdomains, but the docs say the host must match exactly apart from subdomains. Not re-verified on 2026-10-27; test it before relying on subdomain matching. (Short-lived tokens being on by default for new OAuth Apps was confirmed on 2026-10-27.)"
   ],
   "meta": {
     "generated_at": "2026-10-27",
     "generated_by": "Claude Opus 5.5 (OAuth Runway investigator)",
     "mode": "library",
-    "reviewed": "Not human-reviewed. Live checks were run unauthenticated with curl on 2026-10-27."
+    "reviewed": "On 2026-10-27 a fact-checker re-verified the OAuth App expiring-token, 10-redirect-URI and per-URI wildcard claims (A1) against the 2026-08-14 changelog and confirmed them; added opt-in, last-use and pre-2026-08-03 wildcard details. Still unverified: whether wildcard matching covers subdomains, plus the items in uncertainties."
   }
 }
