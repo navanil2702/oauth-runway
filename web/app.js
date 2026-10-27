@@ -9,7 +9,9 @@
   "use strict";
 
   const EMBED = window.__RUNWAY__ || null;
-  const IS_ARTIFACT = !!EMBED;
+  const IS_STATIC = !!(EMBED && EMBED.static); // public copy (GitHub Pages): library only
+  const IS_ARTIFACT = !!EMBED && !IS_STATIC;
+  const REPO_URL = "https://github.com/navanil2702/oauth-runway";
   const $ = (sel, el = document) => el.querySelector(sel);
   const app = $("#app");
 
@@ -215,7 +217,16 @@
     },
   };
 
-  const backend = IS_ARTIFACT ? artifactBackend : serverBackend;
+  const staticBackend = {
+    label: "Public copy · library only",
+    async list() { return EMBED.guides.map((g) => ({ ...g, meta: { collection: "library", ...(g.meta || {}) } })); },
+    async generate() {
+      throw new Error("Live generation doesn't run on this public copy: there is no Claude behind a static page. "
+        + "Run OAuth Runway locally with an Anthropic API key (3 commands, see " + REPO_URL + "#run-it) and this same search researches the app live.");
+    },
+  };
+
+  const backend = IS_STATIC ? staticBackend : IS_ARTIFACT ? artifactBackend : serverBackend;
 
   // ---------- markdown export ----------
   function toMarkdown(g) {
@@ -274,7 +285,8 @@
         <h1>How long until your users can connect?</h1>
         <p class="lede">Before an agent can act in your users' accounts, you need your own OAuth app with each provider, and some providers review it first. Look up an app to see the steps, the wait, what can block approval, and which parts an agent can do for you.</p>
         ${searchBox()}
-        <p class="hint">Not in the library? An agent researches it live (2 to 5 minutes). Try:
+        ${IS_STATIC ? `<p class="hint">This public copy shows the library. To have an agent research any other app live, <a href="${REPO_URL}#run-it" target="_blank" rel="noopener">run it locally</a>.</p>` : ""}
+        <p class="hint"${IS_STATIC ? " hidden" : ""}>Not in the library? An agent researches it live (2 to 5 minutes). Try:
           <button type="button" data-try="Dropbox">Dropbox</button><button type="button" data-try="Zoom">Zoom</button><button type="button" data-try="hubspot.com">hubspot.com</button></p>
       </section>
       <section class="wrap section" aria-labelledby="lib-h">
@@ -421,7 +433,7 @@
         <div class="share"><span class="eyebrow">Share</span>
           <button class="btn" id="copy-link" type="button">Copy link</button>
           <button class="btn" id="copy-md" type="button">Copy as Markdown</button>
-          <button class="btn" id="regen" type="button">Re-check live</button>
+          <button class="btn" id="regen" type="button"${IS_STATIC ? " hidden" : ""}>Re-check live</button>
           <div id="copy-fallback"></div>
         </div>
         <nav aria-label="On this page"><span class="eyebrow">On this page</span>
@@ -495,6 +507,11 @@
       return;
     }
     window.addEventListener("hashchange", route);
+    // "Library" links point at "#"; when the hash is already empty no hashchange fires (e.g. from the live view)
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest('a[href="#"]');
+      if (a && !location.hash.slice(1)) { e.preventDefault(); route(); window.scrollTo(0, 0); }
+    });
     route();
   }
   boot();

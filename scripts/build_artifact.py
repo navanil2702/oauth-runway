@@ -1,6 +1,7 @@
 """Bundle the web app + library guides into one HTML file for publishing as a claude.ai Artifact.
 
   python scripts/build_artifact.py [--url https://claude.ai/artifact/...]
+  python scripts/build_artifact.py --static        # public library-only site in docs/ (GitHub Pages)
 
 In artifact mode, live generation runs on the viewer's own Claude (the `sample` capability)
 and researches with the Claude desktop app's browser when available (`mcp` host:claude_browser).
@@ -18,7 +19,8 @@ WEB = ROOT / "web"
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default="", help="Published artifact URL, used for share links")
-    ap.add_argument("--out", default=str(ROOT / "dist" / "oauth-runway.html"))
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--static", action="store_true", help="Public library-only site (full HTML document, e.g. for GitHub Pages)")
     args = ap.parse_args()
 
     guides = []
@@ -32,6 +34,7 @@ def main() -> None:
         "prompt": (ROOT / "agent" / "research_prompt.md").read_text(),
         "schema": json.dumps(json.loads((ROOT / "agent" / "guide.schema.json").read_text()), separators=(",", ":")),
         "artifactUrl": args.url,
+        "static": args.static,
     }
     index = (WEB / "index.html").read_text()
     head = re.search(r"<head>(.*?)</head>", index, re.S).group(1)
@@ -43,9 +46,15 @@ def main() -> None:
         '<script src="app.js"></script>',
         f"<script>window.__RUNWAY__ = {data};</script>\n<script>\n{(WEB / 'app.js').read_text()}</script>",
     )
-    out = Path(args.out)
+    out = Path(args.out or (ROOT / "docs" / "index.html" if args.static else ROOT / "dist" / "oauth-runway.html"))
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(head.strip() + "\n" + body.strip() + "\n")
+    if args.static:  # a normal web page: restore the document skeleton the artifact host would add
+        page = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+                '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
+                f"{head.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
+    else:
+        page = head.strip() + "\n" + body.strip() + "\n"
+    out.write_text(page)
     print(f"wrote {out} ({out.stat().st_size // 1024} KB, {len(guides)} guides)")
 
 
