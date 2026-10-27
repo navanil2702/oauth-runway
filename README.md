@@ -6,7 +6,7 @@
 - **Live generation**: enter any app name or website and an agent investigates it, runs live checks against its OAuth endpoints, and writes a guide in the same format.
 - **Shareable**: every guide has a link (`#gmail`), a copy-as-Markdown export for tickets and docs, and a step checklist that remembers your progress.
 
-**Try it:** [navanil2702.github.io/oauth-runway](https://navanil2702.github.io/oauth-runway/) is a public, library-only copy that anyone can open. For live generation, [run it locally](#run-it) with an API key, or open the Claude Artifact version in the Claude desktop app (shared on request).
+**Try it:** [navanil2702.github.io/oauth-runway](https://navanil2702.github.io/oauth-runway/) is a public, library-only copy that anyone can open. For live generation, [run it locally](#run-it) with an API key.
 
 ## The problem, as I understood it
 
@@ -53,11 +53,11 @@ The gap between those two clocks is the product. The 7 library apps were chosen 
              ┌──────────── web/ (one static app) ────────────┐
              │ library table · guide page · live log · share │
              └──────────┬───────────────────────┬────────────┘
-       local server mode │                       │ claude.ai artifact mode
+       local server mode │                       │ public copy (GitHub Pages)
                          ▼                       ▼
-     server.py  POST /api/generate (SSE)     viewer's Claude (`sample`)
-     agent/investigator.py                   + Claude app browser (`mcp`)
-       Claude API (claude-opus-5-5)          guides saved to artifact `db`
+     server.py  POST /api/generate (SSE)     docs/index.html: library
+     agent/investigator.py                   embedded, no live generation
+       Claude API (claude-opus-5-5)
        web_search · web_fetch (server tools)
        probe_http (local, public hosts only)
        submit_guide → agent/validate.py
@@ -92,10 +92,10 @@ Other commands:
 ```
 
 ```bash
-.venv/bin/python scripts/build_artifact.py --url https://claude.ai/artifact/<id>
+.venv/bin/python scripts/build_artifact.py --static
 ```
 
-Add `--static` to build the public library-only copy into `docs/` (served by GitHub Pages). Without it, the script bundles everything into one HTML file for a claude.ai Artifact. In that version, live generation runs on the viewer's own Claude and researches with the Claude desktop app's browser. In a plain web browser, with no browser tool available, it drafts from model knowledge and marks the whole guide as an unverified draft.
+The last one rebuilds the public library-only copy in `docs/`, which GitHub Pages serves. Run it after changing any guide, then commit and push.
 
 ## Verification
 
@@ -128,7 +128,6 @@ What I learned from it:
 - **Wait times are the weakest data.** Providers rarely publish SLAs. Timelines combine stated maximums with community reports and are marked as such. Treat them as planning ranges.
 - **Policies change fast.** Several of the most important findings are from 2025-2026 (Slack's limits on unlisted apps, Salesforce's Connected App shutdown, Microsoft's consent policy, GitHub's expiring OAuth App tokens). Each guide shows its generation date, and the batch script supports `--refresh`. A production version would re-run guides on a schedule and diff them.
 - **Live generation was tested offline only in this repo.** The agent loop and the SSE stream are covered by tests with a scripted fake Claude client ([`tests/test_investigator.py`](tests/test_investigator.py)). The Dropbox guide was produced with the same prompt by a Claude Code subagent, not through `server.py`. Running `server.py` with a real key is the remaining end-to-end check.
-- **The artifact's live mode depends on the viewer.** It needs a signed-in Claude viewer, and it only has a browser in the Claude desktop app. Elsewhere it falls back to a clearly labeled, unverified draft.
 - **The library has 8 guides, not 100.** `scripts/apps.txt` lists the next 40, chosen from Composio's managed toolkits that teams most often move to their own app.
 
 ## Scaling to 100
@@ -150,7 +149,7 @@ web/                       the app (index.html, app.js, styles.css)
 data/guides/               library guides
 data/generated/            guides produced by live runs
 verification/              fact-check results for a sample of claims
-scripts/                   artifact bundler, batch library builder, app list
+scripts/                   public-site builder, batch library builder, app list
 tests/                     offline tests for the agent loop and server
 ```
 
