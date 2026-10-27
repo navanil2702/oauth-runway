@@ -1,0 +1,735 @@
+{
+  "id": "linkedin",
+  "name": "LinkedIn",
+  "provider": "LinkedIn (Microsoft)",
+  "website": "https://www.linkedin.com/developers/",
+  "category": "Social / professional network",
+  "summary": "You can create a LinkedIn app and add the self-serve products (Sign In with LinkedIn using OpenID Connect, Share on LinkedIn) in about 30 minutes. There is no review, so any member can connect right away, but that only lets an agent read the user's name, photo and email and post as them. It cannot read their feed, posts or comments. Anything useful beyond that, such as Company Page posting, reading comments or analytics, needs the Community Management API. That API is vetted, open only to registered legal entities, needs your app verified by a LinkedIn Page super admin, and goes through two review tiers that builders report take weeks to months.",
+  "verdict": {
+    "difficulty": 4,
+    "label": "Partner-gated",
+    "headline": "The self-serve scopes (openid, profile, email, w_member_social) only let an agent post as the user. Reading content or managing Company Pages needs Community Management API approval: business entity, Page-verified app, two review tiers, and approval is at LinkedIn's discretion."
+  },
+  "timeline": {
+    "first_connection": "30-60 minutes (create the app tied to a LinkedIn Page, add the self-serve products, set the redirect URL). Assumes you already have a LinkedIn Page to select.",
+    "production": "Self-serve scopes: same day, with no review and no user cap. Community Management API: plan for 1-3+ months to Standard tier (Development-tier vetting, then building and recording a screencast, then Standard-tier review). LinkedIn publishes no SLA.",
+    "hands_on_effort": "Self-serve: 1-2 hours. Community Management: about 1 day for forms, business email and Page verification, plus building the full integration and recording a narrated screencast for Standard tier.",
+    "wait_detail": "Self-serve products are provisioned instantly. For Community Management, the waits are: (1) the Page super admin approving the app verification link (expires after 30 days); (2) Development-tier vetting of your business email, organization, website and use case; (3) a vetting survey that must be completed within 21 days; (4) Standard-tier review of the screencast, privacy policy and data-storage compliance. LinkedIn says restricted APIs have 'no fixed timeline'. Builders report 4-8 weeks on a fast path and 3+ months on average for Marketing/partner programs. A rejection means creating a new app and starting over. For comparison, LinkedIn's own partner-support guide says Advertising API Standard-tier review 'can take up to 30 business days'.",
+    "first_connection_short": "30-60 min",
+    "production_short": "1-3+ months",
+    "hands_on_short": "1-2 days"
+  },
+  "approval": {
+    "needed_for_production": false,
+    "type": "none for self-serve products; partner program (Community Management / Advertising API vetting, Development then Standard tier) for anything beyond sign-in and posting as the member",
+    "trigger": "Requesting any scope outside openid/profile/email/w_member_social. That includes w_organization_social, r_organization_social, rw_organization_admin, w_member_social_feed and r_member_postAnalytics, which come only with the Community Management API (or Advertising API).",
+    "what_happens_without_it": "Self-serve apps work for any LinkedIn member with no warning screen or user cap, but they can only sign the user in (name, photo, email) and create posts as them (150 requests/member/day). Requesting a non-provisioned scope fails at the authorize step. Community Management Development tier (once vetted) is capped at 500 calls/app/day and 100 calls/member/day, with no BATCH_GET and no webhook push. You must reach Standard tier within 12 months.",
+    "cost": "No fee. LinkedIn's API terms say the APIs are currently free but it may charge in future (quoted via a third-party guide). Community Management requires a registered legal organization and a business email address.",
+    "evidence": "official",
+    "source_ids": [
+      "s1",
+      "s4",
+      "s5",
+      "s8",
+      "s12"
+    ]
+  },
+  "managed_option": {
+    "composio_managed": "unknown",
+    "when_you_need_your_own": "Managed OAuth apps for LinkedIn typically carry only the self-serve scopes. You need your own app when you want your brand on the consent screen, your own rate-limit bucket (150 posts/member/day and 100k/app/day are per app), or Community Management scopes. Those are granted per app after vetting and cannot be borrowed."
+  },
+  "prerequisites": [
+    {
+      "item": "A personal LinkedIn account for the developer",
+      "why": "The Developer Portal requires a signed-in member to create and own apps."
+    },
+    {
+      "item": "A LinkedIn Page (company Page) to associate the app with",
+      "why": "Every app is tied to one Page that becomes its publisher. The tie is permanent and the app cannot be moved to another Page. Individual developers must still pick a default Page."
+    },
+    {
+      "item": "Access to a super admin of that Page",
+      "why": "Page verification of the app is required for Community Management (and other vetted products). Only a super admin can approve it, within 30 days."
+    },
+    {
+      "item": "Registered legal entity, business email on your domain, website and privacy policy",
+      "why": "Required only for the Community Management API. Personal email addresses fail vetting."
+    },
+    {
+      "item": "App logo and name that contain no part of 'LinkedIn', 'Linked', 'In' or Microsoft marks",
+      "why": "Using these is a stated rejection reason for Community Management review."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Create the app",
+      "goal": "Get a client ID and secret tied to your LinkedIn Page",
+      "duration": "15-30 minutes",
+      "steps": [
+        {
+          "title": "Sign in to the LinkedIn Developer Portal",
+          "detail": "The /developers/apps/new URL serves a public 'Developers | LinkedIn' page with no anonymous redirect. Creating an app requires a signed-in LinkedIn member.",
+          "owner": "you",
+          "effort": "2 min",
+          "url": "https://www.linkedin.com/developers/apps/new",
+          "evidence": "tested",
+          "source_ids": [
+            "t5",
+            "s3"
+          ]
+        },
+        {
+          "title": "Create (or pick) the LinkedIn Page the app will belong to",
+          "detail": "The app is permanently bound to this Page. Choose your company Page, not a throwaway one, if you will ever apply for Community Management.",
+          "owner": "you",
+          "effort": "5-10 min",
+          "url": "https://www.linkedin.com/help/linkedin/answer/a548360",
+          "evidence": "official",
+          "source_ids": [
+            "s3"
+          ]
+        },
+        {
+          "title": "Fill in app name, Page, privacy policy URL and logo",
+          "detail": "Avoid 'LinkedIn', 'Linked', 'In' and Microsoft names or logos in the app name and logo. An agent can draft the name, generate the logo spec and write the privacy-policy section on LinkedIn data use.",
+          "owner": "agent+you",
+          "effort": "10 min",
+          "evidence": "official",
+          "source_ids": [
+            "s5"
+          ]
+        },
+        {
+          "title": "Agree to the API Terms and create the app",
+          "owner": "you",
+          "effort": "1 min",
+          "evidence": "inferred"
+        }
+      ]
+    },
+    {
+      "name": "Configure & test (self-serve)",
+      "goal": "Complete a real connection with openid/profile/email and w_member_social",
+      "duration": "15-45 minutes",
+      "steps": [
+        {
+          "title": "Products tab: add 'Sign In with LinkedIn using OpenID Connect' and 'Share on LinkedIn'",
+          "detail": "These are the only 'Open Permissions' available to all developers without approval. They grant openid, profile, email and w_member_social instantly.",
+          "owner": "you",
+          "effort": "2 min",
+          "url": "https://www.linkedin.com/developers/apps",
+          "evidence": "official",
+          "source_ids": [
+            "s1"
+          ]
+        },
+        {
+          "title": "Auth tab: add absolute HTTPS redirect URLs",
+          "detail": "URLs must be absolute and may not contain '#'. Query parameters on the registered URL are ignored. The redirect_uri sent at runtime must match a registered URL. Copy the client ID and secret into your secret store.",
+          "owner": "you",
+          "effort": "5 min",
+          "evidence": "official",
+          "source_ids": [
+            "s2"
+          ]
+        },
+        {
+          "title": "Implement the authorization code flow with client secret (server side)",
+          "detail": "GET https://www.linkedin.com/oauth/v2/authorization, then POST https://www.linkedin.com/oauth/v2/accessToken (x-www-form-urlencoded, client_secret in the body). Validate the id_token against the JWKS. The agent can write and test this code.",
+          "owner": "agent",
+          "effort": "1 hour",
+          "evidence": "tested",
+          "source_ids": [
+            "t1",
+            "t2",
+            "t3",
+            "s2"
+          ]
+        },
+        {
+          "title": "Connect your own LinkedIn account end to end",
+          "detail": "Log in and consent on LinkedIn, confirm /v2/userinfo returns your profile, then create a test post through /v2/ugcPosts or /rest/posts.",
+          "owner": "you",
+          "effort": "10 min",
+          "evidence": "official",
+          "source_ids": [
+            "s2",
+            "s6",
+            "s7"
+          ]
+        },
+        {
+          "title": "Build re-authorization handling for 60-day tokens",
+          "detail": "Self-serve apps get no programmatic refresh token. Re-run the authorize redirect before expiry: the consent screen is skipped if the member is still logged in and the token has not expired. On a 401, send the user back through OAuth.",
+          "owner": "agent",
+          "effort": "1-2 hours",
+          "evidence": "official",
+          "source_ids": [
+            "s2",
+            "s9"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Get Community Management API access (only if you need Page or read access)",
+      "goal": "Unlock organization posting, comments/reactions, Page and post analytics",
+      "duration": "Weeks to months; no published SLA",
+      "steps": [
+        {
+          "title": "Create a NEW app for Community Management",
+          "detail": "Official: the Community Management API must be the only product on its app, for legal and security reasons. If the app has Sign In, Share, Ads or any pending request, the request button is greyed out. Create a separate app on the same company Page. Your user-facing sign-in/share app and your Community Management app will be different client IDs.",
+          "owner": "you",
+          "effort": "10 min",
+          "evidence": "official",
+          "source_ids": [
+            "s12",
+            "s5"
+          ]
+        },
+        {
+          "title": "Send the Page verification link to a Page super admin and have them approve",
+          "detail": "Settings tab > Verify generates a unique URL. The super admin opens it, signs in and approves. The link expires after 30 days. Approval cannot be undone and makes that admin responsible for the app.",
+          "owner": "you",
+          "effort": "5 min plus waiting on the admin",
+          "url": "https://www.linkedin.com/help/linkedin/answer/a548360",
+          "evidence": "official",
+          "source_ids": [
+            "s3",
+            "s5"
+          ]
+        },
+        {
+          "title": "Request the Community Management API on the Products tab and complete the Development-tier access form",
+          "detail": "Requires the legal org name, registered address, website, privacy policy and a business email (verified by link; personal emails fail). The agent can draft the use-case description and check it against LinkedIn's restricted-use-cases page.",
+          "owner": "agent+you",
+          "effort": "1-2 hours",
+          "evidence": "official",
+          "source_ids": [
+            "s5",
+            "s4"
+          ]
+        },
+        {
+          "title": "LinkedIn vets the developer, organization, domain, use case and Page verification",
+          "detail": "Approval grants the Development tier: 500 calls/app/day, 100/member/day, no BATCH_GET and no webhook push. You must build the use case within 12 months.",
+          "owner": "provider",
+          "effort": "Wait: weeks (community-reported; no official SLA)",
+          "evidence": "official",
+          "source_ids": [
+            "s5",
+            "s4"
+          ]
+        },
+        {
+          "title": "Build the full integration on Development tier",
+          "owner": "agent+you",
+          "effort": "Days to weeks",
+          "evidence": "official",
+          "source_ids": [
+            "s4"
+          ]
+        },
+        {
+          "title": "Record a narrated, high-resolution screencast for each use case and apply for Standard tier",
+          "detail": "The recording must show the complete OAuth consent flow, posting, how commenter personal data is displayed, and analytics. You also supply test credentials, a company and product overview, and a valid privacy policy. The agent can write the shot list and the script.",
+          "owner": "you",
+          "effort": "3-6 hours",
+          "evidence": "official",
+          "source_ids": [
+            "s5"
+          ]
+        },
+        {
+          "title": "Standard-tier review",
+          "detail": "LinkedIn may decline at its discretion even if you meet the criteria. If rejected, you must start over with a new app at Development tier.",
+          "owner": "provider",
+          "effort": "Wait: weeks to months (community-reported)",
+          "evidence": "official",
+          "source_ids": [
+            "s4",
+            "s5",
+            "s8"
+          ]
+        }
+      ]
+    }
+  ],
+  "config": {
+    "console_url": "https://www.linkedin.com/developers/apps",
+    "authorize_url": "https://www.linkedin.com/oauth/v2/authorization",
+    "token_url": "https://www.linkedin.com/oauth/v2/accessToken",
+    "redirect_uri_rules": "Register absolute HTTPS URLs on the Auth tab. No '#' fragments. Query parameters on registered URLs are ignored. The runtime redirect_uri must match a registered one, and the same value must be sent to the token endpoint. Loopback http://127.0.0.1:{port} or http://[::1]:{port} applies only to the native PKCE flow.",
+    "pkce": "Not available by default. The native-client PKCE flow (https://www.linkedin.com/oauth/native-pkce/authorization, loopback redirects, no secret) must be enabled by your LinkedIn point of contact, so it is effectively partner-only. Web and agent backends use the confidential-client code flow with client_secret.",
+    "refresh_tokens": "Access tokens last 60 days (expires_in=5184000). Programmatic refresh tokens (365-day fixed TTL that does not reset on use) are given only to approved Marketing Developer Platform partners, for example Community Management or Advertising API apps. Self-serve apps must 'refresh' by re-running the authorize redirect, which is silent only if the member is still logged in and the token has not expired. Requesting a different scope set invalidates all of that member's prior tokens for the app. The auth code lives 30 minutes.",
+    "scopes": [
+      {
+        "scope": "openid",
+        "tier": "basic (self-serve)",
+        "note": "Sign In with LinkedIn using OpenID Connect; returns an id_token (RS256, pairwise sub)."
+      },
+      {
+        "scope": "profile",
+        "tier": "basic (self-serve)",
+        "note": "Name, given/family name, picture, locale. No headline, employer or connections via OIDC userinfo."
+      },
+      {
+        "scope": "email",
+        "tier": "basic (self-serve)",
+        "note": "Primary email; the email and email_verified fields may be absent."
+      },
+      {
+        "scope": "w_member_social",
+        "tier": "basic (self-serve)",
+        "note": "Share on LinkedIn: create posts as the member. 150 requests/member/day, 100k/app/day. Write-only: there is no self-serve way to read the member's posts or feed."
+      },
+      {
+        "scope": "w_member_social_feed",
+        "tier": "product-gated",
+        "note": "Community Management API: create, modify and delete comments and reactions as the member."
+      },
+      {
+        "scope": "r_member_postAnalytics / r_member_profileAnalytics",
+        "tier": "product-gated",
+        "note": "Community Management API: member post and profile analytics."
+      },
+      {
+        "scope": "w_organization_social / w_organization_social_feed",
+        "tier": "product-gated",
+        "note": "Community Management or Advertising API: post and manage social actions as a Company Page. The user must hold a Page admin role."
+      },
+      {
+        "scope": "r_organization_social / r_organization_social_feed",
+        "tier": "product-gated",
+        "note": "Read Page posts, comments and reactions."
+      },
+      {
+        "scope": "rw_organization_admin",
+        "tier": "product-gated",
+        "note": "Manage Pages and read Page reporting; the member must be ADMINISTRATOR."
+      },
+      {
+        "scope": "r_basicprofile",
+        "tier": "product-gated",
+        "note": "Headline and public profile URL; only via the Community Management or Advertising API."
+      },
+      {
+        "scope": "rw_ads / r_ads / r_ads_reporting",
+        "tier": "product-gated",
+        "note": "Advertising API (Development tier: edit up to 5 ad accounts)."
+      },
+      {
+        "scope": "r_sales_nav_*",
+        "tier": "partner-only",
+        "note": "SNAP partner program."
+      },
+      {
+        "scope": "r_compliance / w_compliance",
+        "tier": "closed",
+        "note": "Not requestable."
+      }
+    ],
+    "evidence": "official",
+    "source_ids": [
+      "s1",
+      "s2",
+      "s4",
+      "s6",
+      "s7",
+      "s9",
+      "s10",
+      "t1"
+    ]
+  },
+  "gotchas": [
+    {
+      "title": "Self-serve access cannot read anything an agent would want",
+      "detail": "Open permissions are limited to sign-in (name, photo, email) and w_member_social (post as the member). The agent cannot read the user's feed, their own posts, messages, connections or comments. r_member_social is closed to new requests (per a third-party guide). Plan an agent around 'draft and publish posts for the user' or apply for Community Management.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s1",
+        "s8"
+      ]
+    },
+    {
+      "title": "Community Management requires a legal entity, a business email and a Page-verified app",
+      "detail": "Only registered legal organizations with commercial use cases qualify. Personal emails fail vetting. A super admin of the app's Page must approve the verification link within 30 days. Solo developers and side projects cannot get it.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s5",
+        "s3"
+      ]
+    },
+    {
+      "title": "Community Management needs its own app, so you will run two client IDs",
+      "detail": "The Community Management API must be the only product on its developer app. Apps with Sign In with LinkedIn, Share on LinkedIn or Ads get a greyed-out request button. An agent that wants both OIDC login and Page management needs a separate app, with its own consent and tokens, for the Community Management scopes.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s12"
+      ]
+    },
+    {
+      "title": "Rejection means a new app, not a resubmission",
+      "detail": "If the Development or Standard tier request is rejected you cannot reapply with that app. You must create a new app and restart from the Development-tier form. Keep Community Management on a dedicated app, and get the use case right against the restricted-use-cases list before submitting.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s5"
+      ]
+    },
+    {
+      "title": "The app is permanently bound to one LinkedIn Page",
+      "detail": "Apps cannot be transferred to another Page. A rebrand, acquisition or deactivated Page means recreating apps and making every user reconnect.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s3"
+      ]
+    },
+    {
+      "title": "No refresh tokens for self-serve apps: 60-day hard expiry",
+      "detail": "Without MDP partner status there is no refresh_token grant. A background agent will lose access after 60 days unless the user comes back through the authorize redirect (silent only if they are still logged in and the token is unexpired). Track expiry and prompt users to re-connect.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s2",
+        "s9"
+      ]
+    },
+    {
+      "title": "Requesting a different scope set kills existing tokens",
+      "detail": "If a member authorizes with a different scope set, all previous access tokens for your app are invalidated. Users must also accept all requested scopes; partial consent is not possible.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s2"
+      ]
+    },
+    {
+      "title": "OIDC issuer is 'https://www.linkedin.com/oauth', not what the docs show",
+      "detail": "The live discovery document returns issuer 'https://www.linkedin.com/oauth', while the Sign In docs sample shows 'https://www.linkedin.com'. Strict OIDC libraries validate iss, so configure from the live discovery URL, not from the docs sample.",
+      "impact": "nuance",
+      "evidence": "tested",
+      "source_ids": [
+        "t1",
+        "s6"
+      ]
+    },
+    {
+      "title": "Development-tier Community Management limits are tiny",
+      "detail": "500 calls/app/day and 100 calls/member/day, no BATCH_GET and no social-action webhooks. That is fine for a demo and unusable for production. You must reach Standard within 12 months.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s4"
+      ]
+    },
+    {
+      "title": "PKCE / public clients are not self-serve",
+      "detail": "The native PKCE flow needs LinkedIn to enable it for your app via a point of contact. A CLI or desktop agent without a backend cannot do LinkedIn OAuth with self-serve access, so route it through a server that holds client_secret.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s10"
+      ]
+    },
+    {
+      "title": "Marketing API versions sunset on a rolling schedule",
+      "detail": "Versioned /rest APIs are retired regularly (for example 202511 sunsets on 2026-11-16). Pin a LinkedIn-Version header and budget for upgrades.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s4"
+      ]
+    },
+    {
+      "title": "Vetting survey must be completed within 21 days",
+      "detail": "Vetted products auto-generate a survey in the Developer Portal. If it is not submitted within 21 days (or follow-up questions sent to your business email go unanswered), the request is marked 'Insufficient Details'. In that case a Reapply option allows resubmitting on the same app, unlike an outright rejection.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s12"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "'Community Management API' request button is greyed out on the Products tab",
+      "what_to_do": "It must be the only product on its app. Create a new app on the same company Page with no other products or pending requests, and request it there.",
+      "evidence": "official",
+      "source_ids": [
+        "s12"
+      ]
+    },
+    {
+      "symptom": "Authorize page shows: The passed in client_id is invalid \"<id>\" (HTTP 200 HTML page, not a redirect)",
+      "what_to_do": "Copy the client ID exactly from the app's Auth tab. Make sure you are not using a deleted app's ID.",
+      "evidence": "tested",
+      "source_ids": [
+        "t2"
+      ]
+    },
+    {
+      "symptom": "Authorize fails with 'Invalid scope' or unauthorized_scope_error",
+      "what_to_do": "The scope is not provisioned for the app. Check the Auth tab's scope list and add the product on the Products tab. For org/feed scopes you need Community Management approval.",
+      "evidence": "official",
+      "source_ids": [
+        "s2"
+      ]
+    },
+    {
+      "symptom": "Redirect_uri doesn't match (401 on authorize) or invalid_redirect_uri 'appid/redirect uri/code verifier does not match authorization code' on token exchange",
+      "what_to_do": "Register the exact absolute HTTPS URL and send the identical redirect_uri to both endpoints. This also fires if the 30-minute code expired; restart the flow.",
+      "evidence": "official",
+      "source_ids": [
+        "s2"
+      ]
+    },
+    {
+      "symptom": "Token endpoint 401 {\"error\":\"invalid_request\",\"error_description\":\"Unable to retrieve access token: authorization code not found\"}",
+      "what_to_do": "The code was already used, mistyped or expired. Codes are single-use with a 30-minute life; restart authorization.",
+      "evidence": "tested",
+      "source_ids": [
+        "t3",
+        "s2"
+      ]
+    },
+    {
+      "symptom": "API calls return 401 {\"serviceErrorCode\":65604,\"code\":\"EMPTY_ACCESS_TOKEN\"} or a 401 after weeks",
+      "what_to_do": "Missing Bearer header, or the 60-day token expired or was revoked or superseded by a new scope set. Send the user back through OAuth.",
+      "evidence": "tested",
+      "source_ids": [
+        "t6",
+        "s2"
+      ]
+    },
+    {
+      "symptom": "Community Management request rejected",
+      "what_to_do": "Read the reason, fix the use case, business email or Page verification, then create a NEW app and submit a new Development-tier form; the old app cannot reapply. For identity-vetting denials, file a vetting appeal through the Developer Support contact form.",
+      "evidence": "official",
+      "source_ids": [
+        "s5",
+        "s12"
+      ]
+    },
+    {
+      "symptom": "Page super admin never approved, or the verification link shows expired",
+      "what_to_do": "Links expire after 30 days. Generate a new one from Settings > Verify and get it to a current super admin. An unclaimed Page or unreachable admin blocks the whole request.",
+      "evidence": "official",
+      "source_ids": [
+        "s3"
+      ]
+    },
+    {
+      "symptom": "Review stuck with no response",
+      "what_to_do": "Check for an auto-generated vetting survey in the Developer Portal (it must be completed within 21 days), then open a ticket on the Developer Support portal.",
+      "evidence": "official",
+      "source_ids": [
+        "s12",
+        "s4"
+      ]
+    }
+  ],
+  "handoff": {
+    "agent_can": [
+      "Write the full server-side OAuth code flow (authorize redirect, state check, token exchange, id_token validation against the live JWKS and issuer 'https://www.linkedin.com/oauth', userinfo call)",
+      "Implement post creation via /v2/ugcPosts or /rest/posts, including the image/video register-upload-post sequence",
+      "Build token-expiry tracking and the silent re-authorization redirect for 60-day tokens",
+      "Probe the endpoints and verify redirect URI and scope configuration once given the client ID",
+      "Draft the privacy-policy section covering LinkedIn data use, storage and deletion",
+      "Draft the Community Management use-case description and check it against LinkedIn's restricted-use-cases page",
+      "Write the Standard-tier screencast shot list and narration script per use case (OAuth consent, post, comment display, personal-data fields shown, analytics)"
+    ],
+    "you_must": [
+      "Sign in to the Developer Portal with your LinkedIn account and create the app (agree to the API Terms)",
+      "Own or create the LinkedIn Page the app will be permanently tied to",
+      "Get a Page super admin to open and approve the verification link within 30 days",
+      "Supply the legal entity name, registered address and website, and verify a business email (Community Management)",
+      "Decide whether your agent can live with post-only scopes or needs Community Management",
+      "Record the narrated screencast and supply reviewer test credentials for Standard tier",
+      "Connect your own LinkedIn account for end-to-end testing"
+    ]
+  },
+  "tests": [
+    {
+      "check": "OIDC discovery document",
+      "method": "curl https://www.linkedin.com/oauth/.well-known/openid-configuration",
+      "result": "200 JSON: issuer \"https://www.linkedin.com/oauth\", authorization_endpoint https://www.linkedin.com/oauth/v2/authorization, token_endpoint https://www.linkedin.com/oauth/v2/accessToken, userinfo https://api.linkedin.com/v2/userinfo, jwks_uri https://www.linkedin.com/oauth/openid/jwks, response_types [code], subject_types [pairwise], RS256, scopes_supported [openid, profile, email].",
+      "supports": "Endpoints and the self-serve OIDC scopes. Contradicts the docs sample issuer 'https://www.linkedin.com'."
+    },
+    {
+      "check": "Authorize endpoint with dummy client_id",
+      "method": "curl 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=oauth-runway-probe&redirect_uri=https%3A%2F%2Fexample.com%2Fcb&scope=openid%20profile&state=x'",
+      "result": "HTTP 200 HTML page titled 'Authorize | LinkedIn' with alert text: The passed in client_id is invalid \"oauth-runway-probe\". No redirect to the redirect_uri. Same result with scope=w_organization_social.",
+      "supports": "The authorize endpoint is live. A bad client ID shows an error page rather than the documented 401."
+    },
+    {
+      "check": "Token endpoint, authorization_code grant with dummy values",
+      "method": "POST https://www.linkedin.com/oauth/v2/accessToken grant_type=authorization_code&code=dummy&client_id=oauth-runway-probe&client_secret=dummy&redirect_uri=https://example.com/cb",
+      "result": "HTTP 401 {\"error\":\"invalid_request\",\"error_description\":\"Unable to retrieve access token: authorization code not found\"}. Identical with code_verifier instead of client_secret.",
+      "supports": "Token endpoint and error shape match the docs' error table."
+    },
+    {
+      "check": "Token endpoint, client_credentials and refresh_token grants with dummy values",
+      "method": "POST accessToken grant_type=client_credentials / grant_type=refresh_token",
+      "result": "client_credentials: HTTP 400 {\"error\":\"invalid_client_id\",\"error_description\":\"The passed in client_id is invalid \\\"oauth-runway-probe\\\"\"}. refresh_token: HTTP 400 {\"error\":\"invalid_grant\",\"error_description\":\"The provided authorization grant or refresh token is invalid, expired or revoked.\"}",
+      "supports": "Error shapes. The refresh_token grant exists at the endpoint (availability per app is partner-gated per the docs)."
+    },
+    {
+      "check": "Developer console reachability",
+      "method": "curl -L https://www.linkedin.com/developers/apps/new and /developers/apps",
+      "result": "Both return HTTP 200 with title 'Developers | LinkedIn' and no anonymous redirect to a login URL. App creation itself needs a signed-in member (not exercised).",
+      "supports": "Console URL is live. The first human step is signing in."
+    },
+    {
+      "check": "Userinfo without a token",
+      "method": "curl https://api.linkedin.com/v2/userinfo",
+      "result": "HTTP 401 {\"status\":401,\"serviceErrorCode\":65604,\"code\":\"EMPTY_ACCESS_TOKEN\",\"message\":\"Empty oauth2 access token\"}",
+      "supports": "Userinfo endpoint is live and its error shape."
+    },
+    {
+      "check": "JWKS",
+      "method": "curl https://www.linkedin.com/oauth/openid/jwks",
+      "result": "HTTP 200 with RSA keys (kty RSA, e AQAB, kid present).",
+      "supports": "id_token signature validation is possible."
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "title": "Getting Access to LinkedIn APIs (Open Permissions, partner programs)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s2",
+      "title": "LinkedIn 3-Legged OAuth Flow",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s3",
+      "title": "Associate an app with a LinkedIn Page (LinkedIn Help)",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a548360",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s4",
+      "title": "Increasing Access (Marketing API tiers and permissions)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s5",
+      "title": "Community Management App Review",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s6",
+      "title": "Sign In with LinkedIn using OpenID Connect",
+      "url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s7",
+      "title": "Share on LinkedIn",
+      "url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s8",
+      "title": "LinkedIn API Pricing: Complete Guide for 2026 (Blotato, updated 2026-10-15)",
+      "url": "https://www.blotato.com/blog/linkedin-api-pricing",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s9",
+      "title": "Refresh Tokens with OAuth 2.0 (programmatic refresh tokens)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/programmatic-refresh-tokens",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s10",
+      "title": "Authenticating with OAuth 2.0 for Native Clients (PKCE)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow-native",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s11",
+      "title": "Marketing Quick Start (apply for API access)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/quick-start",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s12",
+      "title": "LinkedIn API Partner Support guide (vetting survey, appeals, Community Management sole-product FAQ)",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/linkedin-api-partner-support-guide",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "t1",
+      "title": "Live check: OIDC discovery document",
+      "url": "https://www.linkedin.com/oauth/.well-known/openid-configuration",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "t2",
+      "title": "Live check: authorize endpoint with dummy client_id",
+      "url": "https://www.linkedin.com/oauth/v2/authorization",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "t3",
+      "title": "Live check: token endpoint error shapes",
+      "url": "https://www.linkedin.com/oauth/v2/accessToken",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "t5",
+      "title": "Live check: Developer Portal reachability",
+      "url": "https://www.linkedin.com/developers/apps/new",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "t6",
+      "title": "Live check: userinfo without token",
+      "url": "https://api.linkedin.com/v2/userinfo",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "uncertainties": [
+    "Community Management review times: LinkedIn publishes no SLA ('no fixed timeline' for restricted APIs). The only timing figures found (4-8 weeks fast path, 3-4 months average, 6+ months slow) come from one 2026 third-party guide about Marketing/partner programs, not from first-hand forum reports. No Reddit or Stack Overflow data points were found.",
+    "Whether a Page verification is needed for the self-serve products: the Help article says a Page association is required to create an app and verification is needed 'for certain functionality'. Official docs tie verification explicitly only to Community Management. Not verified for Sign In / Share without an account.",
+    "That r_member_social is closed to new requests comes from the third-party guide (s8). It does not appear in the official open-permissions list, which supports the claim but does not state it.",
+    "The exact Developer Portal create-app form fields (privacy policy URL required vs optional, logo size) were not observed because app creation needs a signed-in account.",
+    "The authorize endpoint returned an HTTP 200 error page for an invalid client_id, whereas the docs list 401. The exact behavior for a valid client with an unprovisioned scope or mismatched redirect could not be tested without a real client ID.",
+    "Composio managed-auth support for LinkedIn and which scopes it carries were not researched."
+  ],
+  "meta": {
+    "generated_at": "2026-10-27",
+    "generated_by": "OAuth Runway investigator agent (Claude)",
+    "mode": "library",
+    "reviewed": "Not human-reviewed. Live checks were run unauthenticated with curl on 2026-10-27."
+  }
+}

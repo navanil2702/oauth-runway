@@ -1,0 +1,474 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OAuth Runway guide",
+  "description": "One guide = what a developer must do to get their OWN OAuth app with a provider ready for their users to connect, how long it takes, and what can block it. Every factual claim carries an evidence level and source ids.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "provider",
+    "summary",
+    "verdict",
+    "timeline",
+    "approval",
+    "phases",
+    "gotchas",
+    "handoff",
+    "config",
+    "sources",
+    "uncertainties",
+    "meta"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "kebab-case slug, e.g. 'gmail'"
+    },
+    "name": {
+      "type": "string",
+      "description": "App as developers think of it, e.g. 'Gmail'"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Company/platform that issues the OAuth app, e.g. 'Google Cloud'"
+    },
+    "website": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "description": "2-3 sentences a developer can paste in Slack: how hard, how long, the one thing that matters most."
+    },
+    "verdict": {
+      "type": "object",
+      "required": [
+        "difficulty",
+        "label",
+        "headline"
+      ],
+      "properties": {
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1 = self-serve in minutes, no review. 2 = self-serve, light config or optional review. 3 = review/verification required for production but predictable (days). 4 = security assessment or partner review, weeks, real chance of rework. 5 = gated/partner-only, approval uncertain or discretionary."
+        },
+        "label": {
+          "type": "string",
+          "description": "e.g. 'Self-serve', 'Review required', 'Security assessment', 'Partner-gated'"
+        },
+        "headline": {
+          "type": "string",
+          "description": "One line: the single thing that decides how hard this is."
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "required": [
+        "first_connection",
+        "production",
+        "hands_on_effort",
+        "first_connection_short",
+        "production_short",
+        "hands_on_short"
+      ],
+      "properties": {
+        "first_connection": {
+          "type": "string",
+          "description": "Time until YOU (the developer/test users) can complete a real OAuth connection. e.g. '15 minutes'"
+        },
+        "production": {
+          "type": "string",
+          "description": "Time until ANY end user can connect without warnings/caps, including review wait. e.g. '4-8 weeks'"
+        },
+        "hands_on_effort": {
+          "type": "string",
+          "description": "Active developer work, excluding waiting. e.g. '2-4 hours + security questionnaire'"
+        },
+        "wait_detail": {
+          "type": "string",
+          "description": "What the waiting is for and what drives variance."
+        },
+        "first_connection_short": {
+          "type": "string",
+          "description": "<= 20 chars, e.g. '30-60 min'"
+        },
+        "production_short": {
+          "type": "string",
+          "description": "<= 20 chars, e.g. '6-10 weeks' or 'Same day'"
+        },
+        "hands_on_short": {
+          "type": "string",
+          "description": "<= 20 chars, e.g. '2-4 hours'"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": [
+        "needed_for_production",
+        "type"
+      ],
+      "properties": {
+        "needed_for_production": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "description": "none | app review | brand/consent verification | security assessment | partner program | marketplace listing (optional)"
+        },
+        "trigger": {
+          "type": "string",
+          "description": "What makes review required (e.g. requesting restricted scopes, >100 users, public distribution)."
+        },
+        "what_happens_without_it": {
+          "type": "string",
+          "description": "e.g. 'unverified app warning + 100 user cap', 'only your own workspace can install'"
+        },
+        "cost": {
+          "type": "string",
+          "description": "Fees, e.g. third-party assessment cost, paid API tier."
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "source_ids": {
+          "$ref": "#/$defs/source_ids"
+        }
+      }
+    },
+    "managed_option": {
+      "type": "object",
+      "description": "Relationship to a managed OAuth app (e.g. Composio managed auth).",
+      "properties": {
+        "composio_managed": {
+          "type": "string",
+          "description": "yes | no | unknown"
+        },
+        "when_you_need_your_own": {
+          "type": "string"
+        }
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item"
+        ],
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Ordered phases: typically 1) Create the app, 2) Configure & test, 3) Get approved / go to production. Each step says who does it.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "steps"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "title",
+                "owner",
+                "evidence"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "owner": {
+                  "type": "string",
+                  "enum": [
+                    "agent",
+                    "you",
+                    "provider",
+                    "agent+you"
+                  ],
+                  "description": "agent = an AI agent can do it unattended (research, drafting, config generation, probing endpoints, filling forms when given a session). you = needs the developer (login, legal identity, payment, video recording, signing agreements, decisions). provider = the provider does it (review)."
+                },
+                "effort": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "$ref": "#/$defs/evidence"
+                },
+                "source_ids": {
+                  "$ref": "#/$defs/source_ids"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "console_url": {
+          "type": "string"
+        },
+        "authorize_url": {
+          "type": "string"
+        },
+        "token_url": {
+          "type": "string"
+        },
+        "redirect_uri_rules": {
+          "type": "string"
+        },
+        "pkce": {
+          "type": "string"
+        },
+        "refresh_tokens": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "scope"
+            ],
+            "properties": {
+              "scope": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "string",
+                "description": "e.g. basic | sensitive | restricted | admin-consent | product-gated"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "source_ids": {
+          "$ref": "#/$defs/source_ids"
+        }
+      }
+    },
+    "gotchas": {
+      "type": "array",
+      "description": "Requirements and nuances that change the outcome. Most important first.",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "detail",
+          "impact",
+          "evidence"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string",
+            "enum": [
+              "blocker",
+              "delay",
+              "nuance"
+            ]
+          },
+          "evidence": {
+            "$ref": "#/$defs/evidence"
+          },
+          "source_ids": {
+            "$ref": "#/$defs/source_ids"
+          }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "description": "If you hit X, do Y. Rejections, error messages, stalled reviews.",
+      "items": {
+        "type": "object",
+        "required": [
+          "symptom",
+          "what_to_do"
+        ],
+        "properties": {
+          "symptom": {
+            "type": "string"
+          },
+          "what_to_do": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/$defs/evidence"
+          },
+          "source_ids": {
+            "$ref": "#/$defs/source_ids"
+          }
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": [
+        "agent_can",
+        "you_must"
+      ],
+      "properties": {
+        "agent_can": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "you_must": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "description": "Live checks the agent actually ran (no account needed): discovery docs, authorize endpoint with a dummy client_id, token endpoint error shape, console reachability. Report literally what came back.",
+      "items": {
+        "type": "object",
+        "required": [
+          "check",
+          "result"
+        ],
+        "properties": {
+          "check": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "supports": {
+            "type": "string",
+            "description": "Which claim this confirms or contradicts."
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "url",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "s1, s2, ..."
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "official",
+              "community",
+              "test"
+            ]
+          },
+          "accessed": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What we could not verify and why. Be specific."
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "generated_by": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "description": "library | live"
+        },
+        "reviewed": {
+          "type": "string",
+          "description": "Human/second-agent verification notes, if any."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "string",
+      "enum": [
+        "tested",
+        "official",
+        "community",
+        "inferred"
+      ],
+      "description": "tested = agent ran a live check that confirms it. official = stated in provider docs/policy. community = forums, blogs, developer reports (timelines usually live here). inferred = reasoning or model knowledge without a source."
+    },
+    "source_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

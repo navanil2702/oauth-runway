@@ -1,0 +1,74 @@
+[
+  {
+    "id": "B1",
+    "claim": "Microsoft-managed default user consent policy (rolled out mid-2025, default for new tenants) blocks user consent to Mail.Read/ReadWrite, Calendars.*, MailboxSettings.*, Contacts.ReadWrite for multi-tenant apps; admin consent required; no publisher-verified exemption.",
+    "verdict": "partly",
+    "correction": "The permission list and 'no verified-publisher exemption' are right, and it is the default for new tenants. Fix the timeline: the mid-2025 rollout only blocked Files.Read(Write).All and Sites.Read(Write).All. Mail, calendar, mailbox and Teams scopes were added around Nov 2025, and more (Contacts/Tasks/People-type) were added in 2026. The Learn page lists Mail.*, Calendars.*, MailBoxSettings.*, Contacts.ReadWrite, Contacts.*.Shared, Tasks.*, People.Read and EAS/EWS/IMAP/POP. It does not list Contacts.Read or Mail.Send. The rule covers every app on a user-consent request, not only multi-tenant ones, and only in tenants still on 'Let Microsoft manage your consent settings'. The one exemption is a separate Microsoft policy for named mail clients (Apple Mail, Spark, eM Client, Thunderbird, etc.). Point users at the admin consent workflow.",
+    "evidence": "Learn 'Manage app consent policies' (updated 2026-08-28) says the managed policy is the default for new tenants, lets users consent to any user-consentable delegated permission 'EXCEPT' the listed scopes, and includes no verified-publisher condition. The rollout dates come from secondary blogs (topedia Nov 2025 and May 2026); the Microsoft message center posts were not reachable.",
+    "source_url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-app-consent-policies",
+    "source_kind": "official"
+  },
+  {
+    "id": "B2",
+    "claim": "Publisher verification requires a vetted Microsoft AI Cloud Partner Program (ex-MPN) account; publisher domain must match a verified domain; verification is free.",
+    "verdict": "confirmed",
+    "correction": "Add some precision. The Partner One ID must be the partner global account (PGA); a location ID will not work. The email domain used in CPP verification must match the app's publisher domain or be a DNS-verified custom domain in the tenant, and *.onmicrosoft.com does not qualify. The app's tenant must be associated with the PGA and the app registered with a work/school account. The user needs App Admin or Cloud App Admin plus CPP Partner Admin or Account Admin, and MFA.",
+    "evidence": "Requirements list on the overview page; its FAQ says 'Microsoft doesn't charge developers for publisher verification.'",
+    "source_url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+    "source_kind": "official"
+  },
+  {
+    "id": "B3",
+    "claim": "As of Spring '26 new Connected App creation is disabled by default; ECAs replace them; a local ECA works only in its own org, so reaching customer orgs needs a packaged ECA in a 2GP managed package installed by each customer.",
+    "verdict": "partly",
+    "correction": "The Spring '26 block is right. Existing connected apps keep working, and Support can grant a temporary exception that Salesforce says will be removed later. Local ECAs cannot be distributed; set Distribution State = Packaged and ship the ECA in a 2GP managed package. One nuance: the global OAuth settings (consumer key/secret) are not packaged and stay in the dev-hub/owner org. Do not frame per-customer install as a pure ECA artifact. It is also what the Sept 2025 'uninstalled app' restriction (B4) requires for non-admin users, so customers must install the package either way.",
+    "evidence": "Salesforce CLI dev guide: 'Connected apps creation is restricted as of Spring '26.' Trailhead 'Package and Distribute External Client Apps' names 2GP distribution as the main advantage of ECAs. The Salesforce help pages themselves did not render; this is Salesforce-owned developer/Trailhead content.",
+    "source_url": "https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_auth_connected_app.htm ; https://trailhead.salesforce.com/content/learn/modules/external-client-app-basics/package-and-distribute-external-client-apps",
+    "source_kind": "official"
+  },
+  {
+    "id": "B4",
+    "claim": "Since ~Sept 2025 users cannot authorize connected apps not installed in their org unless they hold 'Approve Uninstalled Connected Apps' / 'Use Any API Client'.",
+    "verdict": "partly",
+    "correction": "The restriction is right: enforcement ran from about Sep 2 to Sep 17, 2025 for existing orgs, and from Aug 28/Sep 1 for new orgs. Previously authorized users were generally exempt, but device flow was blocked for everyone. Only 'Approve Uninstalled Connected Apps' still bypasses it; System Administrator profiles get it automatically. A Salesforce security update rolling out from the week of Dec 8, 2025 removed the ability of 'Use Any API Client' to self-authorize uninstalled apps. The guide should drop 'Use Any API Client' as a workaround and tell customers to install the app/package.",
+    "evidence": "Salesforce help article 005228838 (as indexed in search; the page did not render): users with Use Any API Client are 'restricted from self-authorizing uninstalled connected apps.' Help article 005132365 describes the September 2025 restriction.",
+    "source_url": "https://help.salesforce.com/s/articleView?id=005132365&language=en_US&type=1 ; https://help.salesforce.com/s/articleView?language=en_US&id=005228838&type=1",
+    "source_kind": "official"
+  },
+  {
+    "id": "B5",
+    "claim": "AppExchange security review fee is $2,550 (+$150 annual) for paid apps, free for free apps; official timeline ~4-6 weeks.",
+    "verdict": "wrong",
+    "correction": "$2,550 + $150/yr is the pre-March-2023 schedule. The current packaging guide lists $999 per review attempt (initial, resubmission, new version, periodic re-review) for paid, freemium and paid add-on solutions, waived for free solutions, with no annual listing fee. Salesforce's timeline is given by stage, not as one 4-6 week figure: about 1-2 weeks for submission readiness, 3-4 weeks for first test, and 2-3 weeks per resubmission, all called estimates. Confirm the current fee with the Partner Account Manager, since the newest doc page would not render.",
+    "evidence": "The packaging guide fee table (as indexed) shows 'Initial security review $999' and fees waived for free solutions. Salesforce's Feb 2023 notice (reproduced on Medium) eliminated the $2,550 and $150 fees. The 'How the Security Review Works' page gives the stage estimates.",
+    "source_url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/security_review_fees.htm ; https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packageGuide/security_review_how_it_works.htm",
+    "source_kind": "official"
+  },
+  {
+    "id": "B6",
+    "claim": "Community Management API must be the only product on its developer app (cannot combine with Sign In with LinkedIn); requires a registered legal entity; a rejected request cannot be resubmitted on the same app.",
+    "verdict": "partly",
+    "correction": "Legal entity and no-resubmit are confirmed: after a rejection you create a new app, for both Development and Standard tier. The vetting appeal via the Contact form is a separate path for identity-vetting denials. 'Only product' is too strong. LinkedIn says to request Development tier only on a new app with no other API products; the option is greyed out otherwise. Once Standard tier is approved, it can be added to an existing app (e.g. an Ads API app) by citing the approved client ID, after which the vetting app can be discarded. The docs say nothing explicit about adding Sign In with LinkedIn afterwards.",
+    "evidence": "CM overview FAQ: request Development tier 'with new developer applications that don't have access to other API products'. App review page: 'You won't be able to re-apply... with your existing app' and 'only available to registered legal organizations'.",
+    "source_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview ; https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review",
+    "source_kind": "official"
+  },
+  {
+    "id": "B7",
+    "claim": "Self-serve LinkedIn apps (Sign In with LinkedIn using OIDC, Share on LinkedIn) do not get refresh tokens; access tokens last 60 days.",
+    "verdict": "confirmed",
+    "correction": "Optionally add: programmatic refresh tokens (365-day fixed TTL) are only for approved partners such as MDP / vetted marketing APIs. Self-serve apps must re-run the OAuth flow, which skips the consent screen if the member is logged in and the token is still valid. Requesting a different scope invalidates earlier access tokens.",
+    "evidence": "The 3-legged OAuth page says all access tokens have a 60-day lifespan and programmatic refresh tokens 'are available for a limited set of partners'.",
+    "source_url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+    "source_kind": "official"
+  },
+  {
+    "id": "B8",
+    "claim": "Notion docs disagree on whether a public integration's Authorization URL exists before 'submitted for review'; does Notion now rotate refresh tokens (change ~June 2026)?",
+    "verdict": "partly",
+    "correction": "Authorization URL: the current Authorization guide is the authoritative text and says the field populates only after the public connection is submitted for review, in the Configuration tab. The Public connections guide only says to find it in the Configuration tab and does not contradict this; older wording ('once made public') is superseded. Marketplace listing is a separate security review. Refresh: the refresh endpoint returns a new access_token and a new refresh_token. The docs do not say whether the old refresh token is invalidated, so store the new one each time. The June 8, 2026 changelog entry is a different change: new public connections mint a fresh access/refresh pair on every successful OAuth authorization (including re-auth), where they previously returned the existing active token. Existing connections keep the old behavior. Do not describe that as refresh-token rotation.",
+    "evidence": "Authorization guide: 'The Authorization URL field populates after a public connection is submitted for review.' Refresh reference: refreshing generates 'new access token and new refresh token.' Changelog 2026-06-08 on per-authorization token pairs.",
+    "source_url": "https://developers.notion.com/guides/get-started/authorization ; https://developers.notion.com/reference/refresh-a-token ; https://developers.notion.com/page/changelog",
+    "source_kind": "official"
+  }
+]

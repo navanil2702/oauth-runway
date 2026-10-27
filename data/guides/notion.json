@@ -1,0 +1,654 @@
+{
+  "id": "notion",
+  "name": "Notion",
+  "provider": "Notion Labs (Notion Developer portal)",
+  "website": "https://developers.notion.com",
+  "category": "Docs & knowledge base",
+  "summary": "Notion is mostly self-serve. You create a public connection (OAuth) in the Developer portal, pick 'Any workspace' as the installation scope, and can complete your first connection in under an hour. Notion's own docs only require review for the optional Marketplace listing, which takes 5-10 business days. The thing that matters most for an agent is the access model: the agent sees only the pages each user picks in Notion's page picker at consent. The alternative is Notion's remote MCP server, which needs no app registration, sees everything the user can see, and forces users to reconnect at least every 180 days.",
+  "verdict": {
+    "difficulty": 2,
+    "label": "Self-serve",
+    "headline": "No mandatory app review for OAuth. What decides the outcome is the installation scope ('Any workspace', which can't be changed later) and the per-page access each user grants at consent."
+  },
+  "timeline": {
+    "first_connection": "30-60 minutes",
+    "production": "Same day if you skip the Marketplace. Allow 1-3 weeks if you list on the Marketplace, or if the 'submitted for review' gate mentioned in the authorization guide applies to your connection.",
+    "hands_on_effort": "2-4 hours: OAuth plumbing, refresh-token rotation, handling the page picker and empty access. Add about half a day for a Marketplace listing (copy, images, logo).",
+    "wait_detail": "There is no documented wait to start OAuth with arbitrary workspaces. Marketplace listing review is 'within 5-10 business days via email' per Notion. Rejections over brand/trademark or quality add a resubmit cycle. One sentence in the authorization guide says the Authorization URL field populates only after a public connection is submitted for review, while the public-connections page simply says to copy it from the Configuration tab. Plan for the possibility of a short review wait.",
+    "first_connection_short": "30-60 min",
+    "production_short": "Same day",
+    "hands_on_short": "2-4 hours"
+  },
+  "approval": {
+    "needed_for_production": false,
+    "type": "marketplace listing (optional)",
+    "trigger": "Only a Marketplace listing requires review ('The Notion team reviews every listing submission'). The getting-started guide also says public connections must undergo a Notion security review before being listed on the Marketplace. Listing is only possible with installation scope 'Any workspace'.",
+    "what_happens_without_it": "Your connection still works through its OAuth flow ('Public connections work independently of Marketplace listings'). Users reach it only via your own install link, not through Marketplace discovery. With 'Selected workspaces only', only the workspaces you picked can install it.",
+    "cost": "No fees documented. Rate limits depend on the installing workspace's plan, not on your app: 600 requests/min per connection on Business/Enterprise, 180 requests/min on other plans.",
+    "evidence": "official",
+    "source_ids": [
+      "s2",
+      "s3",
+      "s4",
+      "s8"
+    ]
+  },
+  "managed_option": {
+    "composio_managed": "unknown",
+    "when_you_need_your_own": "You need your own public connection when you want your own name and logo on the consent screen, your own Marketplace listing, a duplicated template during install, or control over which capabilities are requested and how tokens are refreshed. Notion MCP is an alternative that avoids a REST app entirely: clients self-register via dynamic client registration or CIMD."
+  },
+  "prerequisites": [
+    {
+      "item": "A Notion account and a development workspace",
+      "why": "A public connection is created inside the Developer portal and tied to a development workspace."
+    },
+    {
+      "item": "HTTPS redirect URI(s) on your backend",
+      "why": "Redirect URIs must be registered on the connection, and the token exchange must happen server-side with the client secret (HTTP Basic auth)."
+    },
+    {
+      "item": "Decide on the installation scope before creating the connection",
+      "why": "'Any workspace' vs 'Selected workspaces only' can't be changed after creation. Only 'Any workspace' can be listed on the Marketplace."
+    },
+    {
+      "item": "Privacy policy and terms URLs, plus a logo (if you plan to list)",
+      "why": "These are required for a Marketplace listing. Older community guides say they were required to make any integration public."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Create the public connection",
+      "goal": "Get an OAuth client ID and secret that any workspace can install.",
+      "duration": "15-30 minutes",
+      "steps": [
+        {
+          "title": "Sign in to the Notion Developer portal",
+          "detail": "Go to Build > Public connections > Create new connection. The portal requires a logged-in Notion session (the integrations dashboard URL returns a 200 app shell; auth happens client-side).",
+          "owner": "you",
+          "effort": "2 min",
+          "url": "https://app.notion.com/developers/connections",
+          "evidence": "official",
+          "source_ids": [
+            "s3"
+          ]
+        },
+        {
+          "title": "Choose installation scope 'Any workspace'",
+          "detail": "This is the only option that lets arbitrary users install and the only one that can be listed on the Marketplace. It can't be changed later; changing it means creating a new connection and asking every user to reconnect.",
+          "owner": "you",
+          "effort": "1 min (decision)",
+          "evidence": "official",
+          "source_ids": [
+            "s3",
+            "s4"
+          ]
+        },
+        {
+          "title": "Fill in name, development workspace, redirect URI(s) and capabilities",
+          "detail": "For a read/write agent, choose Read, Update and Insert content, plus Read and Insert comments. Choose 'User information without email' unless you need emails. Fewer capabilities make admin approval more likely, and changing capabilities later forces users to re-authenticate.",
+          "owner": "agent+you",
+          "effort": "10 min",
+          "evidence": "official",
+          "source_ids": [
+            "s3",
+            "s9"
+          ]
+        },
+        {
+          "title": "Optionally add a public template page",
+          "detail": "If you configure a template, users can duplicate it at install time instead of picking pages. Your agent then gets a known page (duplicated_template_id) and doesn't depend on users picking the right pages.",
+          "owner": "you",
+          "effort": "10 min",
+          "evidence": "official",
+          "source_ids": [
+            "s1"
+          ]
+        },
+        {
+          "title": "Copy the client ID, client secret and Authorization URL from the Configuration tab",
+          "detail": "Store the secret in your secrets manager. The authorization guide says the Authorization URL field populates after the connection is submitted for review; if it's blank, build the URL yourself (see config.authorize_url) or submit the connection.",
+          "owner": "you",
+          "effort": "5 min",
+          "evidence": "official",
+          "source_ids": [
+            "s1",
+            "s3"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Configure & test the OAuth flow",
+      "goal": "Connect your own workspace end-to-end and handle page selection, token refresh and rate limits.",
+      "duration": "2-4 hours",
+      "steps": [
+        {
+          "title": "Implement the authorize redirect",
+          "detail": "GET https://api.notion.com/v1/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&owner=user&state=... The endpoint 302-redirects to app.notion.com/install-integration, where the user picks a workspace and pages.",
+          "owner": "agent",
+          "effort": "20 min",
+          "evidence": "tested",
+          "source_ids": [
+            "s1",
+            "s15"
+          ]
+        },
+        {
+          "title": "Exchange the code server-side",
+          "detail": "POST https://api.notion.com/v1/oauth/token with HTTP Basic auth (client_id:client_secret) and JSON {grant_type: authorization_code, code, redirect_uri}. Include redirect_uri if it was in the authorize URL or if you registered more than one. Store access_token, refresh_token, bot_id, workspace_id and owner.",
+          "owner": "agent",
+          "effort": "30 min",
+          "evidence": "official",
+          "source_ids": [
+            "s1",
+            "s5",
+            "s16"
+          ]
+        },
+        {
+          "title": "Implement refresh with rotation",
+          "detail": "Use grant_type=refresh_token. Each refresh returns a new access token and a new refresh token, so persist the newest one atomically and serialize refreshes per connection. refresh_token may be null, so handle that case.",
+          "owner": "agent",
+          "effort": "45 min",
+          "evidence": "official",
+          "source_ids": [
+            "s1",
+            "s6"
+          ]
+        },
+        {
+          "title": "Handle 'connected but sees nothing'",
+          "detail": "After consent, the agent can access only the pages and databases the user selected in the page picker, and their children. Use the search endpoint to list what was shared, and show a 'share more pages' prompt that re-runs OAuth. Since June 2026, each re-authorization mints a fresh token pair for new public connections, so replace the stored tokens.",
+          "owner": "agent",
+          "effort": "1 hour",
+          "evidence": "official",
+          "source_ids": [
+            "s1",
+            "s7"
+          ]
+        },
+        {
+          "title": "Connect your own workspace and a second test workspace",
+          "detail": "Complete the flow as yourself, then from a different workspace to confirm 'Any workspace' installs work without review.",
+          "owner": "you",
+          "effort": "15 min",
+          "evidence": "inferred"
+        },
+        {
+          "title": "Add 429 handling",
+          "detail": "Respect Retry-After. Limits are 180 requests/min per connection (600 on Business/Enterprise), about 3 requests/s for data-source queries, plus a per-workspace budget shared across all connections in that workspace.",
+          "owner": "agent",
+          "effort": "30 min",
+          "evidence": "official",
+          "source_ids": [
+            "s8",
+            "s7"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Go to production (optional Marketplace listing)",
+      "goal": "Let any user install the connection, optionally with Marketplace discovery.",
+      "duration": "Same day without a listing; 1-3 weeks with one",
+      "steps": [
+        {
+          "title": "Ship your own 'Connect Notion' button",
+          "detail": "With 'Any workspace' scope, this is production. No user cap or unverified-app warning is documented.",
+          "owner": "agent+you",
+          "effort": "30 min",
+          "evidence": "official",
+          "source_ids": [
+            "s4"
+          ]
+        },
+        {
+          "title": "Draft the Marketplace listing",
+          "detail": "Name, description, category, tags, images, logo and the linked public connection. Save it as a draft under Listings.",
+          "owner": "agent+you",
+          "effort": "2-4 hours",
+          "evidence": "official",
+          "source_ids": [
+            "s4"
+          ]
+        },
+        {
+          "title": "Submit the listing for review",
+          "detail": "Submit from Listings > Connections, then track it under Submitted.",
+          "owner": "you",
+          "effort": "5 min",
+          "evidence": "official",
+          "source_ids": [
+            "s4"
+          ]
+        },
+        {
+          "title": "Notion reviews the listing",
+          "detail": "Notion says to 'expect to hear back from our team within 5-10 business days via email'. It also says public connections undergo a security review before Marketplace listing.",
+          "owner": "provider",
+          "effort": "5-10 business days",
+          "evidence": "official",
+          "source_ids": [
+            "s4",
+            "s2"
+          ]
+        },
+        {
+          "title": "Address feedback and resubmit if rejected",
+          "detail": "Notion lists brand/trademark issues, quality concerns and unmet baseline criteria as rejection reasons.",
+          "owner": "agent+you",
+          "effort": "1-3 hours per cycle",
+          "evidence": "official",
+          "source_ids": [
+            "s4"
+          ]
+        }
+      ]
+    }
+  ],
+  "config": {
+    "console_url": "https://app.notion.com/developers/connections",
+    "authorize_url": "https://api.notion.com/v1/oauth/authorize (params: client_id, redirect_uri, response_type=code, owner=user, state). It 302-redirects to https://app.notion.com/install-integration.",
+    "token_url": "https://api.notion.com/v1/oauth/token (HTTP Basic client_id:client_secret, JSON body; grant types authorization_code and refresh_token)",
+    "redirect_uri_rules": "Redirect URIs must be registered on the connection. redirect_uri in the token request is required if it was sent on the authorize URL or if more than one URI is registered. Use HTTPS in production. Whether localhost is accepted isn't documented on the pages we read.",
+    "pkce": "REST public connections: not documented; they use a confidential client with a secret. Notion MCP (mcp.notion.com): PKCE S256 is mandatory per the docs and advertised in the discovery metadata.",
+    "refresh_tokens": "REST: a refresh_token (nullable) is returned and rotates on every refresh. Access-token lifetime isn't documented and the token response has no expires_in; older community guides say tokens never expire. Notion MCP: access tokens last about 8 hours; refresh tokens have a 180-day absolute cap from first authorization, expire after 30 days of inactivity, rotate on each refresh (at most 2 valid at once), and reusing a rotated refresh token can revoke the whole connection.",
+    "scopes": [
+      {
+        "scope": "capability: Read content",
+        "tier": "basic",
+        "note": "Notion uses capabilities configured on the connection, not OAuth scope strings. Access is also limited to pages the user selects."
+      },
+      {
+        "scope": "capability: Update content",
+        "tier": "basic",
+        "note": "Needed for edits."
+      },
+      {
+        "scope": "capability: Insert content",
+        "tier": "basic",
+        "note": "Needed to create pages, blocks and database rows."
+      },
+      {
+        "scope": "capability: Read comments / Insert comments",
+        "tier": "basic"
+      },
+      {
+        "scope": "capability: User information with email addresses",
+        "tier": "basic",
+        "note": "Doesn't trigger review, but more capabilities make admin approval less likely. Prefer 'without email'."
+      },
+      {
+        "scope": "MCP: default",
+        "tier": "basic",
+        "note": "The only resource scope advertised by mcp.notion.com. Acts with the user's full Notion permissions."
+      },
+      {
+        "scope": "MCP: ema_issuer:manage",
+        "tier": "product-gated",
+        "note": "Advertised in the MCP discovery metadata. Appears related to enterprise-managed authorization (inferred). OIDC identity scopes are granted only to clients Notion allows."
+      }
+    ],
+    "evidence": "official",
+    "source_ids": [
+      "s1",
+      "s5",
+      "s6",
+      "s9",
+      "s12",
+      "s17"
+    ]
+  },
+  "gotchas": [
+    {
+      "title": "Agent sees only the pages the user picks at consent",
+      "detail": "The consent screen includes a page picker. The connection gets access only to the selected pages and databases and their children, and only pages the user has full access to appear. Users who skip selecting pages leave your agent with an empty workspace. Mitigations: provide a template to duplicate, detect empty search results and prompt users to re-run OAuth to add pages, and tell users to pick a top-level teamspace page.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "title": "Installation scope is permanent",
+      "detail": "'Selected workspaces only' can never become 'Any workspace' and isn't Marketplace-eligible. Picking it by mistake means creating a new connection and having every user reconnect.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s3",
+        "s4"
+      ]
+    },
+    {
+      "title": "Authorization URL may be hidden until submission",
+      "detail": "The authorization guide says 'The Authorization URL field populates after a public connection is submitted for review', while the public-connections guide simply says to copy it from Configuration. The standard authorize URL can be built manually. It's unverified whether unsubmitted connections are blocked for outside workspaces.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s1",
+        "s3"
+      ]
+    },
+    {
+      "title": "Refresh tokens rotate; concurrent refresh breaks connections",
+      "detail": "Each refresh returns a new refresh token. Store it atomically and don't refresh the same grant in parallel. On MCP, reusing a rotated-away refresh token can revoke the entire connection, and invalid_grant should be treated as final.",
+      "impact": "delay",
+      "evidence": "official",
+      "source_ids": [
+        "s6",
+        "s12"
+      ]
+    },
+    {
+      "title": "Re-authorization mints a new token pair (since June 2026)",
+      "detail": "New public connections now get a fresh access_token and refresh_token for each successful OAuth authorization, so a 'share more pages' re-auth must replace the stored tokens. Older guides that say re-auth returns the same token are outdated.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s7"
+      ]
+    },
+    {
+      "title": "Changing capabilities forces every user to re-auth",
+      "detail": "For public connections, users must re-authenticate if capabilities change. Request the full read/write set up front.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s9"
+      ]
+    },
+    {
+      "title": "Rate limits depend on the customer's plan and are shared per workspace",
+      "detail": "The limit is 180 requests/min per connection on Free/Plus and 600 on Business/Enterprise, plus a per-workspace limit shared with all other connections in that workspace (added June 2026). Data-source queries are capped at about 3 requests/s. An agent doing bulk reads in a busy workspace can get 429s even when under its own limit.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s8",
+        "s7"
+      ]
+    },
+    {
+      "title": "Notion MCP is a different trade-off",
+      "detail": "mcp.notion.com supports dynamic client registration and CIMD, so there's no app to create or review. It acts with the user's full permissions, with no page picker. Its tokens work only with MCP, not the REST API. Refresh tokens expire after 180 days from first authorization regardless of use, so users must reconnect. Enterprise workspace owners can restrict members to an approved list of AI apps, which blocks unapproved clients. Guests can't connect.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s10",
+        "s11",
+        "s12",
+        "s13",
+        "s17"
+      ]
+    },
+    {
+      "title": "Internal connections are single-workspace only",
+      "detail": "An internal connection token (or personal access token) works for one workspace and requires manually sharing pages with it. It's fine for prototyping, but not for letting your users connect their own Notion.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s2"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "Token exchange returns 401 {\"error\":\"invalid_client\"}",
+      "what_to_do": "Check that you're using HTTP Basic auth with client_id:client_secret from the public connection's Configuration tab (not an internal token), and that the secret wasn't rotated.",
+      "evidence": "tested",
+      "source_ids": [
+        "s16"
+      ]
+    },
+    {
+      "symptom": "Token exchange returns 400 invalid_grant",
+      "what_to_do": "The code was already used or expired, or redirect_uri doesn't match. For refresh, you used a rotated-away refresh token. Re-run the authorization; don't retry the same refresh.",
+      "evidence": "official",
+      "source_ids": [
+        "s6",
+        "s12"
+      ]
+    },
+    {
+      "symptom": "OAuth succeeds but search returns no pages, or the API returns object_not_found",
+      "what_to_do": "The user didn't select those pages in the picker. Send them back through OAuth to add pages, or have them use '...' > Connections on the page in Notion.",
+      "evidence": "official",
+      "source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "symptom": "No Authorization URL in the Configuration tab",
+      "what_to_do": "Build it manually (https://api.notion.com/v1/oauth/authorize?client_id=...&response_type=code&owner=user&redirect_uri=...). If installs from outside workspaces still fail, submit the connection for review.",
+      "evidence": "inferred",
+      "source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "symptom": "A user's workspace admin blocks the install, or an Enterprise workspace blocks your MCP client",
+      "what_to_do": "Request fewer capabilities. For MCP, the workspace owner must add your client to the approved AI apps list (Enterprise).",
+      "evidence": "official",
+      "source_ids": [
+        "s9",
+        "s13"
+      ]
+    },
+    {
+      "symptom": "Marketplace listing rejected",
+      "what_to_do": "Read the emailed reason (brand/trademark, quality or baseline criteria), fix it and resubmit from Listings. Your OAuth flow keeps working in the meantime.",
+      "evidence": "official",
+      "source_ids": [
+        "s4"
+      ]
+    },
+    {
+      "symptom": "429 rate_limited even at low traffic",
+      "what_to_do": "This may be the per-workspace limit (other connections in that workspace). Honor Retry-After and the rate_limit_reason in the body, and back off.",
+      "evidence": "official",
+      "source_ids": [
+        "s7",
+        "s8"
+      ]
+    }
+  ],
+  "handoff": {
+    "agent_can": [
+      "Write the authorize redirect, the server-side code exchange (Basic auth) and refresh-token rotation with per-connection locking",
+      "Build the 'connected but no pages shared' detection (empty search) and the re-auth prompt copy that tells users which pages to select",
+      "Pick the minimal capability set and draft the capability list to enter in the portal",
+      "Write 429 backoff using Retry-After and rate_limit_reason",
+      "Draft the Marketplace listing text (description, tags, category) plus the privacy-policy section on what Notion content the agent reads and stores",
+      "Probe the endpoints (authorize, token, MCP discovery) to confirm the configuration, as done in this guide",
+      "If going the MCP route: implement PKCE S256, dynamic client registration or CIMD, and handling for refresh expiry at 180 days or after 30 days of inactivity"
+    ],
+    "you_must": [
+      "Log in to the Notion Developer portal and create the public connection (choose 'Any workspace'; this can't be changed later)",
+      "Store the client secret in your secrets manager",
+      "Decide the capabilities, including whether you need user emails",
+      "Complete the first OAuth connection with your own Notion account and select pages in the picker",
+      "If listing: provide the logo, images and brand assets, submit the listing, and answer reviewer emails",
+      "Host the privacy policy and terms pages"
+    ]
+  },
+  "tests": [
+    {
+      "check": "REST authorize endpoint with a dummy client_id",
+      "method": "curl GET https://api.notion.com/v1/oauth/authorize?client_id=oauth-runway-probe&redirect_uri=https://example.com/cb&response_type=code&owner=user",
+      "result": "HTTP 302 to https://app.notion.com/install-integration?response_type=code&client_id=oauth-runway-probe&redirect_uri=https%3A%2F%2Fexample.com%2Fcb&owner=user. The install page itself returned HTTP 200 (a client-rendered app), so an invalid client_id isn't rejected at the HTTP level.",
+      "supports": "The authorize URL is correct and consent happens on app.notion.com. A misconfigured client isn't caught until the install page renders."
+    },
+    {
+      "check": "REST token endpoint with dummy credentials (authorization_code and refresh_token grants)",
+      "method": "curl POST https://api.notion.com/v1/oauth/token -u oauth-runway-probe:dummy with a JSON body",
+      "result": "HTTP 401 {\"error\":\"invalid_client\",\"request_id\":\"...\"} for both grant types",
+      "supports": "Token URL, Basic client auth, the refresh_token grant being accepted as a grant type, and the error shape."
+    },
+    {
+      "check": "OAuth discovery on api.notion.com",
+      "method": "curl GET https://api.notion.com/.well-known/oauth-authorization-server",
+      "result": "HTTP 400 {\"object\":\"error\",\"status\":400,\"code\":\"invalid_request_url\",\"message\":\"Invalid request URL.\"}",
+      "supports": "The REST API has no discovery document, so hard-code its endpoints."
+    },
+    {
+      "check": "Notion MCP authorization-server metadata",
+      "method": "curl GET https://mcp.notion.com/.well-known/oauth-authorization-server and /.well-known/oauth-protected-resource",
+      "result": "HTTP 200. issuer https://mcp.notion.com; authorize /authorize; token /token; registration_endpoint /register; scopes_supported [default, ema_issuer:manage]; code_challenge_methods_supported [S256]; token_endpoint_auth_methods include none and private_key_jwt; client_id_metadata_document_supported true; grant types include the jwt-bearer / ID-JAG profile. The resource is named 'Notion MCP (Beta)'.",
+      "supports": "MCP supports DCR, CIMD, PKCE and public clients, and enterprise-managed auth."
+    },
+    {
+      "check": "Notion MCP endpoint and authorize with an unknown client",
+      "method": "curl POST https://mcp.notion.com/mcp; GET /authorize?client_id=oauth-runway-probe...; POST /token",
+      "result": "/mcp returned HTTP 401 with WWW-Authenticate: Bearer realm=\"OAuth\", resource_metadata=\".../.well-known/oauth-protected-resource/mcp\", scope=\"default\". /authorize returned 400 {\"error\":\"invalid_request\",\"error_description\":\"Invalid client_id\"}. /token returned 401 {\"error\":\"invalid_client\",\"error_description\":\"Client not found\"}.",
+      "supports": "MCP validates clients strictly, unlike the REST authorize endpoint, so you must register (DCR/CIMD) first."
+    },
+    {
+      "check": "Unauthenticated REST call",
+      "method": "curl GET https://api.notion.com/v1/users/me",
+      "result": "HTTP 401 {\"code\":\"unauthorized\",\"message\":\"Authorization header must use the format \\\"Bearer <token>\\\".\"}",
+      "supports": "Bearer token auth on the REST API."
+    },
+    {
+      "check": "Developer console reachability",
+      "method": "curl GET https://www.notion.so/profile/integrations",
+      "result": "HTTP 200 (client-rendered shell; login is enforced in the browser, not by a redirect)",
+      "supports": "The first human step is signing in to Notion in a browser."
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "title": "Notion Developers: Authorization (public connection OAuth flow)",
+      "url": "https://developers.notion.com/guides/get-started/authorization",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s2",
+      "title": "Notion Developers: Getting started (internal vs public connections)",
+      "url": "https://developers.notion.com/docs/getting-started",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s3",
+      "title": "Notion Developers: Public connections",
+      "url": "https://developers.notion.com/guides/get-started/public-connections",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s4",
+      "title": "Notion Developers: List on the Marketplace",
+      "url": "https://developers.notion.com/guides/get-started/marketplace-listing",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s5",
+      "title": "Notion API reference: Create a token",
+      "url": "https://developers.notion.com/reference/create-a-token",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s6",
+      "title": "Notion API reference: Refresh a token",
+      "url": "https://developers.notion.com/reference/refresh-a-token",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s7",
+      "title": "Notion Developers: Changelog",
+      "url": "https://developers.notion.com/page/changelog",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s8",
+      "title": "Notion API reference: Request limits",
+      "url": "https://developers.notion.com/reference/request-limits",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s9",
+      "title": "Notion API reference: Connection capabilities",
+      "url": "https://developers.notion.com/reference/capabilities",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s10",
+      "title": "Notion Developers: Notion MCP overview",
+      "url": "https://developers.notion.com/docs/mcp",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s11",
+      "title": "Notion Developers: Connect to Notion MCP",
+      "url": "https://developers.notion.com/guides/mcp/get-started-with-mcp",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s12",
+      "title": "Notion Developers: Build an MCP client for Notion",
+      "url": "https://developers.notion.com/guides/mcp/build-mcp-client",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s13",
+      "title": "Notion Help Center: Notion MCP (admin controls)",
+      "url": "https://www.notion.com/help/notion-mcp",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s14",
+      "title": "Nango: How to register your own Notion API OAuth app (older; says no refresh tokens)",
+      "url": "https://nango.dev/docs/api-integrations/notion/how-to-register-your-own-notion-api-oauth-app.md",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s15",
+      "title": "Live check: REST authorize endpoint with a dummy client_id",
+      "url": "https://api.notion.com/v1/oauth/authorize",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s16",
+      "title": "Live check: REST token endpoint with dummy credentials",
+      "url": "https://api.notion.com/v1/oauth/token",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s17",
+      "title": "Live check: Notion MCP OAuth metadata, /authorize, /token and /mcp",
+      "url": "https://mcp.notion.com/.well-known/oauth-authorization-server",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "uncertainties": [
+    "Whether a public REST connection that hasn't been submitted for review can be installed by outside workspaces. The authorization guide says the Authorization URL 'populates after a public connection is submitted for review', but the public-connections and Marketplace pages say connections work independently of listings. We couldn't test this without an account.",
+    "The REST access-token lifetime: the token response has no expires_in, and docs don't state it. Older community guides (Nango) say tokens never expire and there are no refresh tokens, which current docs contradict (refresh_token grant, rotation). Plan for expiry and handle a null refresh_token.",
+    "Exactly which fields are required to create a public connection today (company name, privacy policy, terms, support email were required in the older 'make public' form per community guides). Current docs list only name, workspace, redirect URIs, scope and capabilities.",
+    "Whether localhost or http redirect URIs are accepted for REST public connections. This isn't stated on the pages we read.",
+    "What the Marketplace 'security review' involves (questionnaire? pen-test?) and real-world turnaround. Only Notion's '5-10 business days' figure was found; no community reports on wait times turned up.",
+    "Whether Composio or other managed-auth providers offer a managed Notion OAuth app. Not checked.",
+    "The meaning of the MCP scope 'ema_issuer:manage' is inferred from its name and the enterprise-managed authorization docs.",
+    "We did not exercise MCP dynamic client registration live because it would create a client registration; only the metadata was read."
+  ],
+  "meta": {
+    "generated_at": "2026-10-27",
+    "generated_by": "Claude Opus 5.5 (OAuth Runway investigator)",
+    "mode": "library",
+    "reviewed": "Not reviewed by a human or second agent."
+  }
+}

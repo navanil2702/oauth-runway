@@ -1,0 +1,65 @@
+[
+  {
+    "id": "A1",
+    "claim": "GitHub changelog ~2026-08-14: OAuth Apps support expiring user tokens (8h) with refresh tokens (6 months), on by default for new OAuth Apps; up to 10 redirect URIs; per-URI wildcard/subpath redirect matching toggle.",
+    "verdict": "confirmed",
+    "correction": "No change needed. Small details to add: existing apps can opt in by requesting the offline_access scope or by forcing expiration app-wide. Turning it on does not expire tokens already issued. The 6-month refresh-token lifetime counts from last use. Apps that had a single callback URL before 2026-08-03 had wildcard matching turned on for that URL. Wildcard matching accepts subpaths, and the changelog also mentions subdomains, but the docs say the host must match exactly apart from subdomains. Check this subdomain detail before relying on it.",
+    "evidence": "The changelog dated 2026-08-14 gives an 8-hour access token and a 6-month refresh token, says short-lived tokens are on by default for new apps, allows up to 10 redirect URIs, and lets each redirect URI have its own wildcard setting. Quote: \"Short-lived tokens are enabled by default for all new applications.\"",
+    "source_url": "https://github.blog/changelog/2026-08-14-multiple-redirect-uris-and-token-refresh-for-oauth-apps",
+    "source_kind": "official"
+  },
+  {
+    "id": "A2",
+    "claim": "gmail.metadata is RESTRICTED; gmail.send is sensitive; gmail.labels is non-sensitive.",
+    "verdict": "confirmed",
+    "correction": "",
+    "evidence": "I fetched Google's Gmail API scopes page with curl. gmail.labels is under 'Non-sensitive scopes' and gmail.send is under 'Sensitive scopes'. gmail.metadata is under 'Restricted scopes', together with readonly, compose, insert, modify, settings.basic, settings.sharing and mail.google.com.",
+    "source_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+    "source_kind": "official"
+  },
+  {
+    "id": "A3",
+    "claim": "External app in Testing: refresh tokens expire 7 days after consent (unless only openid/email/profile), Testing limited to 100 test users.",
+    "verdict": "confirmed",
+    "correction": "No change needed. Optional: a test user counts against the 100-user quota as soon as they are added. Apps that request only the basic identity scopes do not need users on the test-user list.",
+    "evidence": "Google's OAuth 2.0 overview says Testing apps get refresh tokens that expire in 7 days, except when the app asks only for name, email and profile. The Manage App Audience help page sets the limit at 100 test users. Quote: \"Authorizations by a test user will expire seven days from the time of consent.\"",
+    "source_url": "https://support.google.com/cloud/answer/15549945?hl=en ; https://developers.google.com/identity/protocols/oauth2",
+    "source_kind": "official"
+  },
+  {
+    "id": "A4",
+    "claim": "Unverified production apps: lifetime cap of 100 new users that cannot be reset; Google's own page states CASA costs roughly $500-$4,500 per year.",
+    "verdict": "partly",
+    "correction": "Google describes two different limits. (1) The Unverified apps page caps an app at '100 new users in total' until it is verified, says verification lifts the cap, and says quotas may be adjusted per app. (2) The separate 'user cap' on unapproved sensitive or restricted scopes is the one that lasts for the project's lifetime and cannot be reset. On cost: the $500-$4,500 range appears only on Google's Google Health API app-verification page, not on the general restricted-scope or Gmail pages. It is a fee per assessment, paid to the third-party assessor, and depends on the app's complexity. The assessment itself is required every year, but Google does not call the fee a yearly price. Suggested wording: 'about $500-$4,500 per assessment (Google Health API docs), and the assessment must be repeated every year.'",
+    "evidence": "The Manage App Audience page says the user cap is permanent for the project. The Health API page gives the fee range. The restricted-scope verification page gives no price. Quote: \"The user cap applies over the entire lifetime of the project, and it cannot be reset\"",
+    "source_url": "https://support.google.com/cloud/answer/15549945?hl=en ; https://support.google.com/cloud/answer/7454865 ; https://developers.google.com/health/app-verification ; https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+    "source_kind": "official"
+  },
+  {
+    "id": "A5",
+    "claim": "Since 29 May 2025, new installs of commercially distributed non-Marketplace apps limited to 1 req/min and max 15 objects on conversations.history/replies; did pre-May-2025 installs become subject on 3 March 2026?",
+    "verdict": "partly",
+    "correction": "The limit itself is confirmed: from 2025-05-29 it covers new unlisted apps and new installs of existing unlisted apps, and drops conversations.history and conversations.replies from Tier 3 to Tier 1 (1 request per minute, limit default and maximum of 15). Apps built by a customer for internal use are exempt and keep Tier 3 (50+ per minute, up to 1,000 objects). Whether older installs became subject on 3 March 2026 cannot be settled from Slack's pages. The current changelog entry on docs.slack.dev, which the old api.slack.com FAQ URL now redirects to, says existing installs 'will not be impacted' and gives no date. Slack's legacy api.slack.com changelog index pages still say the limits apply to existing installs 'on March 3, 2026'. I found no Slack post confirming the limit was actually enforced on older installs. The guide should present this as unresolved, citing both pages, and tell readers to test against a real older install. The conversations.history reference page still lists only Tier 3.",
+    "evidence": "Current docs.slack.dev text (fetched with curl): \"The new rate limits will not be applied to existing installations\". Legacy api.slack.com/changelog/deprecations still carries the March 3, 2026 wording.",
+    "source_url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps ; https://api.slack.com/changelog/deprecations",
+    "source_kind": "official"
+  },
+  {
+    "id": "A6",
+    "claim": "Since ~July 2026 an app needs at least 10 active workspace installs before Marketplace submission; review: up to 10 business days preliminary, up to 10 weeks functional.",
+    "verdict": "confirmed",
+    "correction": "Confirmed. Add: 'active' means used in the past 28 days, and sandboxes do not count. The app must stay at 10 or more installs for the whole review. The guidelines also reject apps with fewer than 10 weekly active users. Functional review takes up to 10 weeks for new submissions and up to 6 weeks for published apps resubmitting changes. A resubmission after preliminary feedback restarts the queue. The 10-install rule raised the threshold again from the 5 installs that applied from August 2025.",
+    "evidence": "A Slack changelog dated 2026-09-01 says the 10-install requirement applies 'As of July 2026'. The review guide gives the review times. Quote: \"Your app has been installed on 10 or more active workspaces.\"",
+    "source_url": "https://docs.slack.dev/changelog/2026/09/01/slack-marketplace-install-requirement ; https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide",
+    "source_kind": "official"
+  },
+  {
+    "id": "A7",
+    "claim": "Marketplace rejects apps whose only function is an MCP server with no meaningful in-Slack functionality; AI apps may not store Slack data and may not use it to train LLMs.",
+    "verdict": "partly",
+    "correction": "The MCP rule and the ban on training LLMs on Slack data apply as stated: the training ban appears both in the list of unsuitable apps and in the generative-AI rules. The no-storage rule is narrower than the claim. It sits under 'Agent or Assistant UI' and reads 'DON'T store any Slack data you obtain. Store metadata instead ... i.e. zero-copy'. The general generative-AI section does not ban storage. Instead it asks the developer to disclose retention, data tenancy and data residency. Suggested wording: apps using the Agent/Assistant UI must not store Slack data (zero-copy, metadata only), and every AI app must disclose how long it keeps data. Requests for *:history and similar scopes also trigger an enhanced review.",
+    "evidence": "The Marketplace guidelines list as unsuitable any app that would \"provide only an MCP server without meaningful in-Slack functionality\".",
+    "source_url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements",
+    "source_kind": "official"
+  }
+]

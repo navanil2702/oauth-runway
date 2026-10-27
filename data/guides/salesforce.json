@@ -1,0 +1,701 @@
+{
+  "id": "salesforce",
+  "name": "Salesforce",
+  "provider": "Salesforce (External Client Apps / Connected Apps, Partner Program)",
+  "website": "https://developer.salesforce.com",
+  "category": "CRM",
+  "summary": "You can connect your own Salesforce org in about an hour: create a free Developer Edition org and a local External Client App (new Connected Apps are blocked by default since Spring '26). Local ECAs cannot authorize users from other orgs. To serve arbitrary customers you need a 2GP managed package that carries a packaged ECA, and each customer's admin must install it. Once more than two customer production orgs use the app, Salesforce enforces PKCE, refresh-token rotation, a 30-day idle TTL and a refresh-token IP allowlist, which means you need static egress IPs. AppExchange security review (4-6 weeks officially; $2,550 + $150 for paid apps, free apps exempt) is optional unless you want a listing or Professional/Group Edition access.",
+  "verdict": {
+    "difficulty": 4,
+    "label": "Per-org install",
+    "headline": "Since Spring '26 you cannot create a new Connected App by default, and a local External Client App only works in its own org. Multi-tenant access therefore means shipping a packaged ECA in a 2GP managed package that every customer admin installs."
+  },
+  "timeline": {
+    "first_connection": "About 45-90 minutes: free Developer Edition org, a local ECA, then wait up to about 10 minutes for the OAuth settings to take effect.",
+    "production": "1-3 weeks to a working 2GP package that customer admins can install, without AppExchange. Add 4-6 weeks officially for the AppExchange security review; community reports of 6-12 weeks including resubmissions are common, so plan around about 8 weeks. Every customer org also needs an admin to install the package before its users can connect.",
+    "hands_on_effort": "1-3 days for 2GP setup (Dev Hub, namespace, packaged ECA, package versioning), PKCE, rotation-safe token storage and static egress IPs. Add 1-2 weeks for security review prep (scanner reports, docs, test org) if you list.",
+    "wait_detail": "The OAuth settings themselves wait only minutes. The long waits are (a) AppExchange security review, where Salesforce documents about 1-2 weeks for readiness checks plus 3-4 weeks for the first test and queue volume drives variance, (b) the Support case to register refresh-token IP ranges, and (c) each customer's admin installing your package and adjusting policies.",
+    "first_connection_short": "45-90 min",
+    "production_short": "1-3 weeks",
+    "hands_on_short": "1-3 days"
+  },
+  "approval": {
+    "needed_for_production": true,
+    "type": "marketplace listing (optional) + per-org admin install; mandatory OAuth security controls",
+    "trigger": "Connecting orgs other than the one that owns the app. Local ECAs are single-org. Uninstalled Connected Apps have been blocked for ordinary users since Sept 2025. The mandatory partner controls kick in once more than two customer production orgs use the app. Security review is needed only to list on AppExchange, or for API access in Professional or Group Edition orgs that lack the API add-on.",
+    "what_happens_without_it": "Without a package install in the customer org, authorization fails. A local ECA returns OAUTH_AUTHORIZATION_BLOCKED ('Cross-org OAuth flows are not supported for this external client app'). An uninstalled Connected App returns OAUTH_APPROVAL_ERROR_GENERIC or 'app must be installed into org', unless the user holds 'Approve Uninstalled Connected Apps' or 'Use Any API Client'. Without the four controls, Salesforce may suspend the app's interoperation. Without a security review there is no AppExchange listing and no PE/GE API allowlisting.",
+    "cost": "Building and packaging is free (Developer Edition and Dev Hub). AppExchange security review for paid apps: $2,550 plus a $150 first-year listing fee, then $150 a year; free apps are exempt. Customers need Enterprise, Unlimited, Performance or Developer Edition, or Professional Edition with the API add-on. The partner program revenue share for paid apps is not covered here.",
+    "evidence": "official",
+    "source_ids": [
+      "s6",
+      "s7",
+      "s17",
+      "s18",
+      "s21",
+      "s5"
+    ]
+  },
+  "managed_option": {
+    "composio_managed": "unknown",
+    "when_you_need_your_own": "Composio's Salesforce toolkit page describes only customer-owned credentials: you configure your own Salesforce app with Composio's callback URL. It still refers to Connected Apps and says an admin may need to install the app. Assume you need your own app (now an ECA). For multi-tenant use it must be packaged and installed per customer org whatever middleware you use."
+  },
+  "prerequisites": [
+    {
+      "item": "Free Salesforce Developer Edition org (signup at developer.salesforce.com/signup)",
+      "why": "It hosts your app and serves as the Dev Hub for 2GP packaging. It is API-enabled by default."
+    },
+    {
+      "item": "Dev Hub enabled plus a registered namespace (ideally in a Partner Business Org if you join the partner program)",
+      "why": "Packaged ECAs ship only in second-generation managed packages, and a packaged ECA should live in a long-lived org."
+    },
+    {
+      "item": "Static, publicly routable egress IPs for your token-refresh traffic",
+      "why": "The refresh-token IP allowlist is mandatory for partner apps used by more than two customer production orgs. Refreshes from other IPs fail with 'IP restricted by the app developer'."
+    },
+    {
+      "item": "Customers on an edition with API access",
+      "why": "Enterprise, Unlimited, Performance and Developer have it. Professional needs the add-on or a security-reviewed allowlisted app. Essentials, Starter and Group have none."
+    },
+    {
+      "item": "Salesforce CLI (sf)",
+      "why": "You need it to retrieve ECA metadata, set distributionState=Packaged and create package versions."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Create the app",
+      "goal": "A working ECA in your own org",
+      "duration": "30-60 minutes",
+      "steps": [
+        {
+          "title": "Sign up for a Developer Edition org",
+          "detail": "Free. Verify the email and set a password. This org becomes your Dev Hub and app-owning org.",
+          "owner": "you",
+          "effort": "10 min",
+          "url": "https://developer.salesforce.com/signup",
+          "evidence": "tested",
+          "source_ids": [
+            "s4"
+          ]
+        },
+        {
+          "title": "Create an External Client App, not a Connected App",
+          "detail": "Setup > External Client App Manager > New. Enter the name, contact email, Enable OAuth, a callback URL (exact match, https or http://localhost), and scopes such as api, refresh_token and id/openid. Tick 'Require PKCE' and 'Require secret for web server flow'. New Connected App creation has been disabled by default in all orgs since Spring '26; Support can grant a temporary exception that Salesforce says will be removed.",
+          "owner": "you",
+          "effort": "15 min",
+          "url": "https://login.salesforce.com/lightning/setup/ManageExternalClientApplication/home",
+          "evidence": "community",
+          "source_ids": [
+            "s5",
+            "s13",
+            "s21"
+          ]
+        },
+        {
+          "title": "Copy the consumer key and secret",
+          "detail": "In the ECA Settings tab under OAuth Settings, use 'Consumer Key and Secret' (it may require an email verification code). These become client_id and client_secret. Keep the secret out of source control; global OAuth settings are never packaged.",
+          "owner": "you",
+          "effort": "5 min",
+          "evidence": "community",
+          "source_ids": [
+            "s12",
+            "s11"
+          ]
+        },
+        {
+          "title": "Generate config and the PKCE auth-code client",
+          "detail": "An agent can write the authorize and token calls with S256 PKCE, store instance_url per connection, and route sandbox users to test.salesforce.com or their My Domain.",
+          "owner": "agent",
+          "effort": "30-60 min",
+          "evidence": "tested",
+          "source_ids": [
+            "s1",
+            "s2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Configure & test",
+      "goal": "Complete a real OAuth connection and API call against your own org",
+      "duration": "About 30 minutes plus up to 10 minutes propagation",
+      "steps": [
+        {
+          "title": "Set ECA policies",
+          "detail": "On the Policies tab, set Permitted Users (All users may self-authorize, or Admin-approved with a permission set), the refresh token policy, IP relaxation and session timeout (the access token lifetime follows this).",
+          "owner": "you",
+          "effort": "10 min",
+          "evidence": "community",
+          "source_ids": [
+            "s9",
+            "s11"
+          ]
+        },
+        {
+          "title": "Run the web-server flow end to end",
+          "detail": "Redirect to /services/oauth2/authorize with response_type=code, code_challenge and code_challenge_method=S256. Exchange the code at /services/oauth2/token, then call {instance_url}/services/data/vXX.X/sobjects. Use the user's My Domain login URL where possible.",
+          "owner": "agent+you",
+          "effort": "20 min",
+          "evidence": "tested",
+          "source_ids": [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        },
+        {
+          "title": "Implement rotation-safe refresh",
+          "detail": "Persist the new refresh token on every refresh, with a single writer per user-app pair and no retries with an already-used token, because reuse revokes the whole family. Add a heartbeat refresh before 30 days of idleness. Handle invalid_grant by re-prompting.",
+          "owner": "agent",
+          "effort": "2-4 h",
+          "evidence": "official",
+          "source_ids": [
+            "s6",
+            "s7",
+            "s14"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ship to other orgs (package + install)",
+      "goal": "Users in any customer org can connect",
+      "duration": "1-3 weeks",
+      "steps": [
+        {
+          "title": "Enable Dev Hub, register a namespace and set up 2GP",
+          "detail": "Create an sfdx project and retrieve the ECA metadata. Set distributionState=Packaged, keep the global OAuth settings and policy files out of the package (.forceignore), then create and promote a managed package version.",
+          "owner": "agent+you",
+          "effort": "0.5-2 days",
+          "evidence": "community",
+          "source_ids": [
+            "s12",
+            "s11"
+          ]
+        },
+        {
+          "title": "Move refresh traffic to static egress IPs and register them",
+          "detail": "Register the ranges with Salesforce, which the community describes as a Support case. Add the ranges, wait 30-45 minutes, then tick 'Enforce Refresh Token IP Allowlist'. Lock the controls via 'Review Controls'; this is permanent.",
+          "owner": "you",
+          "effort": "0.5-1 day + case wait",
+          "evidence": "official",
+          "source_ids": [
+            "s6",
+            "s14"
+          ]
+        },
+        {
+          "title": "Customer admin installs the package",
+          "detail": "Send each customer the install URL. The admin installs it, opens the ECA in App Manager, and sets Permitted Users and policies. Users can authorize only after this.",
+          "owner": "you",
+          "effort": "Per customer, 10-30 min of their admin's time",
+          "evidence": "community",
+          "source_ids": [
+            "s11",
+            "s9",
+            "s22"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Optional: AppExchange security review",
+      "goal": "AppExchange listing, customer trust, PE/GE API allowlisting",
+      "duration": "4-6 weeks official; plan for about 8 weeks",
+      "steps": [
+        {
+          "title": "Join the Salesforce Partner Program and get a Partner Business Org",
+          "detail": "This is required to list. Link your packaging org in the Partner Console.",
+          "owner": "you",
+          "effort": "1-2 h",
+          "url": "https://partners.salesforce.com/",
+          "evidence": "inferred",
+          "source_ids": []
+        },
+        {
+          "title": "Prepare the submission",
+          "detail": "Include Code Analyzer and DAST scan reports for your external web app and API endpoints, architecture and data-flow docs, a test org and test credentials. An agent can run the scanners and draft the docs; you sign off on the false-positive explanations.",
+          "owner": "agent+you",
+          "effort": "3-10 days",
+          "evidence": "official",
+          "source_ids": [
+            "s17"
+          ]
+        },
+        {
+          "title": "Salesforce reviews",
+          "detail": "About 1-2 weeks of operations readiness checks, then 3-4 weeks for the Product Security test. Failures come back as a report that you must fix and resubmit.",
+          "owner": "provider",
+          "effort": "4-6 weeks wait",
+          "evidence": "official",
+          "source_ids": [
+            "s17"
+          ]
+        },
+        {
+          "title": "Request PE/GE API access if needed",
+          "detail": "After approval, ask for REST allowlisting of your app, or a SOAP API token via a Partner Community case, so customers on Professional or Group Edition can connect without the API add-on. Bulk API stays unavailable.",
+          "owner": "you",
+          "effort": "1 h + case wait",
+          "evidence": "official",
+          "source_ids": [
+            "s18"
+          ]
+        }
+      ]
+    }
+  ],
+  "config": {
+    "console_url": "https://login.salesforce.com/lightning/setup/ManageExternalClientApplication/home (Setup > External Client App Manager)",
+    "authorize_url": "https://login.salesforce.com/services/oauth2/authorize (sandboxes: test.salesforce.com; better: https://{MyDomain}.my.salesforce.com/services/oauth2/authorize)",
+    "token_url": "https://login.salesforce.com/services/oauth2/token",
+    "redirect_uri_rules": "The callback URL must exactly match one registered on the app. Use https, or http://localhost for local development. Several URLs can be listed. A mixed list that includes an https URL triggers all four mandatory controls, including the IP allowlist. Changes can take up to about 10 minutes for Connected Apps; ECA source-org changes are reported as immediate.",
+    "pkce": "Supported with S256 only (discovery advertises code_challenge_methods_supported=['S256']). It is mandatory for auth-code flows of partner apps used by more than two customer production orgs, and enforced from mid-2026.",
+    "refresh_tokens": "Request the refresh_token or offline_access scope. The default policy keeps the token valid until revoked, but partner apps in scope must use rotation (each refresh returns a new token; reusing an old one revokes the family), a 30-day sliding idle TTL and an IP allowlist (up to 10,000 IPs). The access token lifetime follows the session timeout policy (commonly 2 hours) and returns no expires_in. Always use the instance_url from the token response.",
+    "scopes": [
+      {
+        "scope": "api",
+        "tier": "basic",
+        "note": "REST/SOAP/Bulk access to all objects the user can see. This is the core scope an agent needs for read and write; actual access is governed by the user's profile and permission sets."
+      },
+      {
+        "scope": "refresh_token / offline_access",
+        "tier": "basic",
+        "note": "Required for background agent access; subject to rotation, idle TTL and IP allowlist for partner apps."
+      },
+      {
+        "scope": "openid / id / profile / email",
+        "tier": "basic",
+        "note": "Identity URL and user info."
+      },
+      {
+        "scope": "full",
+        "tier": "admin-consent",
+        "note": "Everything the user can access; avoid. Reviewers and admins push back on over-broad scopes."
+      },
+      {
+        "scope": "web / visualforce / lightning",
+        "tier": "basic",
+        "note": "UI-session use cases; not needed for API agents."
+      },
+      {
+        "scope": "chatter_api",
+        "tier": "basic",
+        "note": "Connect REST (Chatter, files)."
+      },
+      {
+        "scope": "mcp_api",
+        "tier": "product-gated",
+        "note": "Listed in the live discovery document. Apparently for Salesforce-hosted MCP servers; check availability per org."
+      },
+      {
+        "scope": "einstein_gpt_api / cdp_* / sfap_api",
+        "tier": "product-gated",
+        "note": "Agentforce, Einstein and Data Cloud APIs; only useful if the org has those licenses."
+      }
+    ],
+    "evidence": "tested",
+    "source_ids": [
+      "s1",
+      "s2",
+      "s3",
+      "s6"
+    ]
+  },
+  "gotchas": [
+    {
+      "title": "New Connected Apps are blocked by default since Spring '26",
+      "detail": "Creation is disabled in all orgs through both the UI and the API. Support can grant a temporary exception, which Salesforce says will be removed. Build on External Client Apps; Connected App to ECA migration is one-way.",
+      "impact": "blocker",
+      "evidence": "community",
+      "source_ids": [
+        "s5",
+        "s13",
+        "s21"
+      ]
+    },
+    {
+      "title": "A local ECA cannot connect other orgs",
+      "detail": "A Connected App defined in org A could authorize users in org B without an install. A local ECA works only in its own org; a packaged ECA works only where installed. Cross-org attempts fail with OAUTH_AUTHORIZATION_BLOCKED: 'Cross-org OAuth flows are not supported for this external client app'.",
+      "impact": "blocker",
+      "evidence": "community",
+      "source_ids": [
+        "s11",
+        "s10"
+      ]
+    },
+    {
+      "title": "Uninstalled apps are blocked for most users (since Sept 2025)",
+      "detail": "Even legacy Connected Apps now need the customer admin to install them (Setup > Connected Apps OAuth Usage > Install), or users need 'Approve Uninstalled Connected Apps' or 'Use Any API Client' (the latter only works under API Access Control). Device flow from uninstalled apps is blocked for everyone.",
+      "impact": "blocker",
+      "evidence": "community",
+      "source_ids": [
+        "s8",
+        "s9",
+        "s22"
+      ]
+    },
+    {
+      "title": "Mandatory OAuth controls for partner apps, including a refresh-token IP allowlist",
+      "detail": "PKCE, refresh-token rotation, a 30-day idle TTL and a refresh-token IP allowlist apply to partner-owned CAs and ECAs used by more than two customer production orgs. The deadline was May 11, 2026, enforcement has started, and the controls cannot be disabled once locked. Serverless or rotating-IP backends must move refresh traffic behind static egress IPs.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s6",
+        "s7"
+      ]
+    },
+    {
+      "title": "API access depends on the customer's edition",
+      "detail": "Enterprise, Unlimited, Performance and Developer include it. Professional needs the API add-on, or your app must pass security review and be allowlisted. Essentials, Starter and Group have none. Calls to an org without API access return API_DISABLED_FOR_ORG, and the user also needs the 'API Enabled' permission.",
+      "impact": "blocker",
+      "evidence": "official",
+      "source_ids": [
+        "s19",
+        "s18"
+      ]
+    },
+    {
+      "title": "Rotation races revoke the whole token family",
+      "detail": "Two agent workers refreshing at once, or a retry with an already-used refresh token, invalidates all refresh tokens for that user and app. Serialize refreshes per connection.",
+      "impact": "delay",
+      "evidence": "community",
+      "source_ids": [
+        "s14"
+      ]
+    },
+    {
+      "title": "Daily API limits are per org, not per app",
+      "detail": "Enterprise gets 100,000 calls per rolling 24h plus 1,000 per Salesforce license. A chatty agent competes with the customer's other integrations for the same pool.",
+      "impact": "nuance",
+      "evidence": "official",
+      "source_ids": [
+        "s20"
+      ]
+    },
+    {
+      "title": "Use the org's My Domain and instance_url",
+      "detail": "Hard-coding na*.salesforce.com or login.salesforce.com breaks sandboxes (test.salesforce.com) and some ECA cases. Store the returned instance_url per connection.",
+      "impact": "nuance",
+      "evidence": "community",
+      "source_ids": [
+        "s23"
+      ]
+    },
+    {
+      "title": "More legacy flow retirements are scheduled",
+      "detail": "Device flow is restricted to local ECAs with localhost callbacks from Nov 30, 2026. Username-password and user-agent flows retire around Feb 2027. Use the web-server (auth code + PKCE) flow.",
+      "impact": "nuance",
+      "evidence": "community",
+      "source_ids": [
+        "s16"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "error=OAUTH_AUTHORIZATION_BLOCKED, 'Cross-org OAuth flows are not supported for this external client app'",
+      "what_to_do": "You are using a local ECA, or a packaged ECA not installed in that org. Ship the ECA in a 2GP managed package and have the customer admin install it. Also try the org's My Domain login URL.",
+      "evidence": "community",
+      "source_ids": [
+        "s10",
+        "s11",
+        "s23"
+      ]
+    },
+    {
+      "symptom": "OAUTH_APPROVAL_ERROR_GENERIC or error_description=app must be installed into org",
+      "what_to_do": "Uninstalled-app restriction. Have the admin install the app (Setup > Connected Apps OAuth Usage > Install) and set Permitted Users, or grant the user 'Approve Uninstalled Connected Apps'.",
+      "evidence": "community",
+      "source_ids": [
+        "s9",
+        "s22"
+      ]
+    },
+    {
+      "symptom": "OAUTH_APP_ACCESS_DENIED / user is not admin approved",
+      "what_to_do": "Permitted Users is set to admin-approved. The admin must assign the app via a profile or permission set, or switch to 'All users may self-authorize'.",
+      "evidence": "community",
+      "source_ids": [
+        "s9"
+      ]
+    },
+    {
+      "symptom": "Refresh fails with 'IP restricted by the app developer'",
+      "what_to_do": "The refresh call left from an IP outside your registered allowlist. Route token refreshes through static egress IPs and add them to the allowlist.",
+      "evidence": "official",
+      "source_ids": [
+        "s6"
+      ]
+    },
+    {
+      "symptom": "invalid_grant on refresh after weeks of inactivity, or after a retry",
+      "what_to_do": "The 30-day idle TTL expired, or a rotated token was reused. Re-prompt the user to connect, add a heartbeat refresh at about 25 days, and serialize refreshes.",
+      "evidence": "official",
+      "source_ids": [
+        "s6",
+        "s14"
+      ]
+    },
+    {
+      "symptom": "API_DISABLED_FOR_ORG on first API call",
+      "what_to_do": "The customer's edition has no API access, typically Professional without the add-on, or Essentials, Starter or Group. They must buy the add-on or upgrade, or your security-reviewed app must be allowlisted for PE.",
+      "evidence": "official",
+      "source_ids": [
+        "s19",
+        "s18"
+      ]
+    },
+    {
+      "symptom": "'New Connected App' button missing or disabled in Setup",
+      "what_to_do": "Expected since Spring '26. Use External Client App Manager instead, or file a Support case for a temporary exception (not recommended).",
+      "evidence": "community",
+      "source_ids": [
+        "s5"
+      ]
+    },
+    {
+      "symptom": "Security review comes back 'Failed' with a findings report",
+      "what_to_do": "Fix the findings, or document false positives with justification, then resubmit. Each resubmission puts you back in the multi-week queue.",
+      "evidence": "official",
+      "source_ids": [
+        "s17"
+      ]
+    }
+  ],
+  "handoff": {
+    "agent_can": [
+      "Write the PKCE (S256) web-server flow, token exchange, per-connection instance_url storage and My Domain/sandbox login routing",
+      "Implement rotation-safe refresh-token storage (atomic swap, per-connection lock, 25-day heartbeat, invalid_grant re-prompt)",
+      "Scaffold the sfdx/2GP project: retrieve ECA metadata, set distributionState=Packaged, write .forceignore, create package versions",
+      "Draft the customer admin install guide (install URL, Permitted Users policy, permission set, edition and API requirements)",
+      "Run Salesforce Code Analyzer and an OWASP ZAP or DAST scan, and draft security-review architecture, data-flow and false-positive docs",
+      "Probe the authorize and token endpoints and generate the scope list and callback config"
+    ],
+    "you_must": [
+      "Sign up for the Developer Edition org and log into Setup (email verification, MFA)",
+      "Create the ECA in the UI and copy the consumer key and secret (email verification code)",
+      "Register the namespace, enable Dev Hub, and decide whether to join the Partner Program",
+      "Provision static egress IPs and file the Support case to register them; lock the controls (permanent)",
+      "Get each customer's Salesforce admin to install the package and set policies",
+      "Submit and pay for AppExchange security review if listing a paid app, and own the reviewer back-and-forth"
+    ]
+  },
+  "tests": [
+    {
+      "check": "OIDC discovery document",
+      "method": "curl https://login.salesforce.com/.well-known/openid-configuration",
+      "result": "200 JSON. issuer=https://login.salesforce.com; authorization_endpoint=.../services/oauth2/authorize; token_endpoint=.../services/oauth2/token; code_challenge_methods_supported=['S256']; grant_types_supported=['authorization_code','refresh_token']; token_endpoint_auth_methods_supported includes client_secret_post/basic, private_key_jwt, tls_client_auth; scopes_supported includes api, refresh_token, offline_access, full, openid, id, chatter_api, mcp_api, a2a_api, einstein_gpt_api, cdp_* (38 total).",
+      "supports": "Endpoint URLs, S256-only PKCE, scope list"
+    },
+    {
+      "check": "RFC 8414 metadata",
+      "method": "curl https://login.salesforce.com/.well-known/oauth-authorization-server",
+      "result": "HTTP 404",
+      "supports": "Use OIDC discovery, not RFC 8414, at the login host"
+    },
+    {
+      "check": "Authorize endpoint with dummy client_id",
+      "method": "GET https://login.salesforce.com/services/oauth2/authorize?client_id=oauth-runway-probe&redirect_uri=https://example.com/cb&response_type=code",
+      "result": "HTTP 400, body: error=invalid_client_id&error_description=client%20identifier%20invalid (no redirect to the callback). test.salesforce.com returned HTTP 400 too.",
+      "supports": "Endpoint is live; an unknown or misconfigured client errors on Salesforce's page and never reaches your callback"
+    },
+    {
+      "check": "Token endpoint with dummy credentials",
+      "method": "POST /services/oauth2/token with grant_type=authorization_code (and client_credentials), dummy client_id/secret",
+      "result": "HTTP 400 {\"error\":\"invalid_client_id\",\"error_description\":\"client identifier invalid\"} for both grants",
+      "supports": "Token error shape (JSON, standard error/error_description)"
+    },
+    {
+      "check": "Revoke endpoint",
+      "method": "POST /services/oauth2/revoke token=dummy",
+      "result": "HTTP 400 error=unsupported_token_type&error_description=this%20token%20type%20is%20not%20supported",
+      "supports": "Revocation endpoint exists"
+    },
+    {
+      "check": "Console and signup reachability",
+      "method": "curl the External Client App Manager setup URL and developer.salesforce.com/signup",
+      "result": "Setup URL returns HTTP 200 for the login page (no session); signup page HTTP 200",
+      "supports": "The first human step is logging into or signing up for an org"
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "title": "Live check: login.salesforce.com OIDC discovery",
+      "url": "https://login.salesforce.com/.well-known/openid-configuration",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s2",
+      "title": "Live check: authorize endpoint with dummy client_id",
+      "url": "https://login.salesforce.com/services/oauth2/authorize",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s3",
+      "title": "Live check: token and revoke endpoints with dummy credentials",
+      "url": "https://login.salesforce.com/services/oauth2/token",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s4",
+      "title": "Live check: console and Developer Edition signup reachability",
+      "url": "https://developer.salesforce.com/signup",
+      "kind": "test",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s5",
+      "title": "Striim docs: Salesforce Connected Apps and External Client Apps (Spring '26 creation block)",
+      "url": "https://striim.com/docs/en/salesforce-connected-apps-and-external-client-apps.html",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s6",
+      "title": "Salesforce Help: Connected Apps & ECA Security Controls - Partner App FAQs (005387798)",
+      "url": "https://help.salesforce.com/s/articleView?id=005387798&language=en_US&type=1",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s7",
+      "title": "Salesforce Help: CA & ECA Security Controls Post-Enforcement Guidance for Partners (005388177)",
+      "url": "https://help.salesforce.com/s/articleView?id=005388177&language=en_US&type=1",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s8",
+      "title": "Soliant Consulting: Salesforce Connected App Security Changes (Sept 2025)",
+      "url": "https://www.soliantconsulting.com/blog/salesforce-connected-app-security-changes-sept2025/",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s9",
+      "title": "Nango: How to fix Salesforce OAUTH_APPROVAL_ERROR_GENERIC",
+      "url": "https://www.nango.dev/blog/fix-salesforce-oauth-approval-error-generic",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s10",
+      "title": "Trailblazer Community: packaged ECA cross-org OAuth blocked",
+      "url": "https://trailhead.salesforce.com/trailblazer-community/feed/0D5KX00000pNxl60AC",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s11",
+      "title": "Aquiva: External Client Apps vs Connected Apps deep dive",
+      "url": "https://aquiva.com/blog/external-client-apps-the-next-generation-of-app-interoperability",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s12",
+      "title": "Sliick: Packaging External Client Apps in 2GP (Mar 2026)",
+      "url": "https://sliick.com/articles/salesforce-external-client-app-2gp-packaging-guide/",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s13",
+      "title": "Salesforce Geek: External Client vs Connected Apps",
+      "url": "https://salesforcegeek.in/external-client-vs-connected-apps/",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s14",
+      "title": "Security Review Partner: 4 new OAuth security requirements for CAs and ECAs",
+      "url": "https://securityreviewpartner.com/blog/new-connected-app-eca-security-requirements",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s15",
+      "title": "Beyond the Cloud: what the May 11, 2026 deadline requires",
+      "url": "https://blog.beyondthecloud.dev/blog/salesforce-connected-app-to-eca-what-the-may-11-2026-deadline-actually-requires-and-what-it-doesnt",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s16",
+      "title": "Software Insights: Salesforce restricts OAuth device flow on 30 Nov 2026",
+      "url": "https://www.softwareinsights.dev/posts/salesforce-oauth-device-flow-external-client-apps/",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s17",
+      "title": "ISVforce Guide: How the AppExchange Security Review Works / fees (read via search-result excerpt; direct fetch returned HTTP 403)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packageGuide/security_review_how_it_works.htm",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s18",
+      "title": "ISVforce Guide: API Access in Group and Professional Editions (read via search-result excerpt; direct fetch returned HTTP 403)",
+      "url": "https://developer.salesforce.com/docs/platform/isvforce/guide/dev-packages-api-access.html",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s19",
+      "title": "REST API Developer Guide: Supported Editions and Required Permissions (read via search-result excerpt; direct fetch returned HTTP 403)",
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/intro-rest-compatible-editions.html",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s20",
+      "title": "Salesforce Limits Cheatsheet: API Request Limits and Allocations (read via search-result excerpt; direct fetch returned HTTP 403)",
+      "url": "https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s21",
+      "title": "Salesforce DX Developer Guide: Create a Connected App in Your Org (Spring '26 restriction note) (read via search-result excerpt; direct fetch returned HTTP 403)",
+      "url": "https://developer.salesforce.com/docs/platform/sfdx-dev/guide/sfdx-dev-auth-connected-app.html",
+      "kind": "official",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s22",
+      "title": "Composio KB: Salesforce toolkit guide",
+      "url": "https://docs.composio.dev/kb/guide/toolkits-salesforce.md",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    },
+    {
+      "id": "s23",
+      "title": "GitHub anthropics/claude-code #94824 (ECA cross-org error resolved via My Domain), via search excerpt",
+      "url": "https://github.com/anthropics/claude-code/issues/94824",
+      "kind": "community",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "uncertainties": [
+    "Cross-org behaviour of local ECAs (OAUTH_AUTHORIZATION_BLOCKED) comes from community sources (Aquiva, a Trailblazer thread); help.salesforce.com ECA articles rendered only an error page to the fetch tool, so this was not confirmed against official text.",
+    "Whether the Support exception for creating new Connected Apps is still granted as of Oct 2026 is unknown. One PTC note claims Connected Apps lose support in Winter '27; Striim says no deprecation date has been announced.",
+    "developer.salesforce.com returned HTTP 403 to both WebFetch and curl. Security review timelines and fees, PE/GE API access, edition support and API limits are taken from search-result excerpts of those official pages, not full reads.",
+    "Security review wait times beyond the official 4-6 weeks rely on general community experience, not a specific 2026 report read here.",
+    "Whether a 2GP managed package containing only an ECA can be installed in customer production orgs before any security review, and whether a Partner Business Org is strictly required, was not confirmed. Promoted 2GP versions are generally installable without listing (inferred).",
+    "The exact process to register refresh-token IP ranges (a Support case per a community source, versus self-serve on the ECA per the official FAQ) is unclear. Whether the IP allowlist applies to JWT and client-credentials flows differs between sources.",
+    "Composio's managed Salesforce auth was not confirmed. Its toolkit doc describes customer-owned credentials only.",
+    "The mcp_api and a2a_api scopes appear in live discovery, but their requirements were not researched."
+  ],
+  "meta": {
+    "generated_at": "2026-10-27",
+    "generated_by": "OAuth Runway research agent (Claude Opus 5.5)",
+    "mode": "library",
+    "reviewed": "Not human-reviewed. Live checks run unauthenticated via curl on 2026-10-27; no account created."
+  }
+}

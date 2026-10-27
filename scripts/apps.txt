@@ -1,0 +1,40 @@
+# Next apps for the library: Composio-managed toolkits developers most often move to their own OAuth app.
+# Done: GitHub, Slack, Gmail, Outlook, Salesforce, LinkedIn, Notion, Dropbox (live run)
+HubSpot
+Zoom
+Google Calendar
+Google Drive
+Jira
+Confluence
+Linear
+Asana
+Airtable
+Figma
+Box
+Calendly
+Discord
+Intercom
+Zendesk
+QuickBooks
+Xero
+Shopify
+Stripe
+Microsoft Teams
+SharePoint
+Trello
+Monday
+ClickUp
+Todoist
+Typeform
+Canva
+Miro
+Webex
+Pipedrive
+Spotify
+X (Twitter)
+Facebook Pages
+Instagram
+YouTube
+TikTok
+Reddit
+Pinterest
